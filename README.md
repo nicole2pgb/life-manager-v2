@@ -49,6 +49,12 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Authentication
+
+The app requires an account. After `npm run db:migrate` and `npm run dev`, open http://localhost:3000, choose **Create account**, and register with a name, email and a password of 8–72 bytes (UTF-8). You are then signed in and land on `/profile`; **Log out** ends the session. Sessions last 30 days.
+
+Run the unit tests (password validation, hashing, token hashing) with `npm test`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

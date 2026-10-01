@@ -9,10 +9,12 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test": "vitest run"
   },
   "dependencies": {
     "@next/env": "^16.3.7",
+    "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.3",
     "mysql2": "^3.24.5",
     "next": "16.3.7",
@@ -29,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

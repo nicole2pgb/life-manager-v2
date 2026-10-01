@@ -60,6 +60,14 @@ Authentication is handled server-side using session-based authentication.
 
 Passwords must never be stored as plain text.
 
+### Sessions and data scoping
+
+- Sessions are stored in the `sessions` table; the cookie holds a random token and only its hash is stored.
+- `getCurrentUser()` (`lib/auth/session.ts`) is the only source of the current user's id. Never take a user id from form fields, URL parameters or other request input.
+- Every data-access function for user-owned data (tasks, recurrence rules, completions, settings) takes the user id as a required argument and filters by it, directly or through the owning task.
+- A record that belongs to another user behaves exactly like a record that does not exist (not found).
+- Every protected page and Server Action must call `getCurrentUser()`; `proxy.ts` is only an optimistic redirect.
+
 ## MVP Principle
 
 Prefer the simplest implementation that correctly supports the MVP.

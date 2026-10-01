@@ -16,6 +16,12 @@ function createDb(): Db {
     );
   }
   const pool: Pool = createPool({ uri: url, timezone: "Z" });
+  // `timezone: "Z"` only controls how the driver converts JS dates. Pin the
+  // MySQL session to UTC too, otherwise TIMESTAMP columns (session expiry)
+  // are shifted by the server's offset.
+  pool.on("connection", (connection) => {
+    connection.query("SET time_zone = '+00:00'");
+  });
   return drizzle(pool, { schema, mode: "default" });
 }
 
