@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  char,
   boolean,
   check,
   date,
@@ -130,3 +131,22 @@ export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 export type RecurrenceRule = typeof recurrenceRules.$inferSelect;
 export type TaskCompletion = typeof taskCompletions.$inferSelect;
+
+// Only a SHA-256 hash of the session token is stored (hex, 64 chars); the raw
+// token lives only in the user's cookie.
+export const sessions = mysqlTable(
+  "sessions",
+  {
+    id: id(),
+    userId: bigint("user_id", { mode: "number", unsigned: true })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: char("token_hash", { length: 64 }).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("sessions_token_hash_unique").on(t.tokenHash),
+    index("sessions_user_id_idx").on(t.userId),
+  ],
+);
