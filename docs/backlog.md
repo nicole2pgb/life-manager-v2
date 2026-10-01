@@ -28,13 +28,15 @@ Detailed requirements for larger features should be defined through OpenSpec bef
 
 ### 3. Task Management
 
-- [ ] Create task
-- [ ] Edit task
-- [ ] Delete task
-- [ ] Complete task
-- [ ] One-time tasks
-- [ ] Notes
-- [ ] Life areas
+- [x] Create task
+- [x] Edit task
+- [x] Delete task
+- [x] Complete task
+- [x] One-time tasks
+- [x] Optional scheduled date for one-time tasks
+- [x] Optional due date for one-time tasks
+- [x] Notes
+- [x] Life areas
 
 ### 4. Recurring Tasks
 

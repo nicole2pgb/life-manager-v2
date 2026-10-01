@@ -26,11 +26,12 @@ function createDb(): Db {
 }
 
 // Created on first use so that `next build` does not need a database.
-// Cached on globalThis so dev hot reloads reuse a single pool.
+// Cached on globalThis (in every environment) so hot reloads and production
+// requests reuse a single pool.
 export function getDb(): Db {
   if (globalForDb.__lifeManagerDb) return globalForDb.__lifeManagerDb;
   const db = createDb();
-  if (process.env.NODE_ENV !== "production") globalForDb.__lifeManagerDb = db;
+  globalForDb.__lifeManagerDb = db;
   return db;
 }
 

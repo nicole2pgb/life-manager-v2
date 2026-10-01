@@ -53,6 +53,8 @@ Information:
 - created at
 - updated at
 - life area
+- scheduled date (optional, one-time tasks only)
+- due date (optional, one-time tasks only)
 
 A task can be:
 
@@ -61,11 +63,42 @@ A task can be:
 
 A task always belongs to exactly one user.
 
+### Dates of One-Time Tasks
+
+A one-time task has exactly one of three date behaviors. Scheduled date and due date are two different concepts and are stored separately.
+
+| Behavior | Scheduled date | Due date | Meaning |
+| --- | --- | --- | --- |
+| No date | empty | empty | Unscheduled, open task. |
+| Scheduled for a date | set | empty | The task is meant to happen on exactly that calendar date. Example: "Doctor appointment" on 10.10.2026. |
+| Due by a date | empty | set | The task has a deadline. Example: "Submit application" due on 10.10.2026. |
+
+Rules:
+
+- A task never has both a scheduled date and a due date.
+- Both are calendar dates (no time of day, no time zone).
+- Both are different from a completion date, which records when a task was actually completed. Completing a task does not change them, and they do not change completion.
+- A date may be in the past, today or the future; the only restriction is that it is a valid calendar date the database supports.
+- While a task is incomplete, the user can add, change, switch (scheduled ↔ due) or remove its date at any time.
+- Once a task is completed, its date is preserved and cannot be changed. If the task is marked incomplete again, its date can be edited again.
+- Passing a task's date never hides, completes or deletes the task. An incomplete task stays an open task until the user completes or deletes it, and its original scheduled date or due date is kept, so later features can tell the original date from the current day.
+- In the MVP UI dates are shown in German format, for example 05.10.2026.
+
+Planned later behavior (documented here so later features stay consistent; not part of the Task Management change):
+
+- Scheduled task: becomes relevant on its scheduled date. If it is not completed on that date, it remains an open task after that date until completed or deleted.
+- Due-date task: is open up to its deadline (eligible to appear every day up to and including the due date) and, if still incomplete afterward, remains open as overdue until completed or deleted.
+- Today, Weekly Overview, overdue presentation and Progress build on these semantics; how each presents them (including where undated tasks appear in the Weekly Overview) is defined in those changes.
+
+Recurring tasks never have a scheduled date or due date; see Recurrence Rule.
+
 ---
 
 ## Recurrence Rule
 
 Defines when a recurring task should appear.
+
+A recurring task is scheduled only by its recurrence rule. It does not use the scheduled date or due date of one-time tasks, and the two must not be combined.
 
 Supported types:
 
@@ -181,6 +214,6 @@ Calculated values include:
 
 - Persist application data in MySQL.
 - Use Drizzle ORM for database access.
-- Store dates consistently.
+- Store dates consistently. Calendar dates (scheduled dates, due dates, completion dates) are plain dates without time zone; see "Calendar Dates" in `architecture.md` for how "today" is determined.
 - Do not duplicate calculated progress data unless necessary.
 - Deleting a task must also handle its associated recurrence and completion data safely.
