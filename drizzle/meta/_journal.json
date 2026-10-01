@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1790778481672,
+      "tag": "0000_salty_spacker_dave",
+      "breakpoints": true
+    }
+  ]
+}

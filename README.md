@@ -1,5 +1,34 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Local Database Setup
+
+Life Manager stores its data in MySQL (8.0.16 or newer, for `CHECK` constraint support) via Drizzle ORM.
+
+1. Install and start a local MySQL server.
+2. Create an empty database and a user with access to it (choose your own names and password), for example:
+
+   ```sql
+   CREATE DATABASE life_manager CHARACTER SET utf8mb4;
+   ```
+
+3. Copy the template and fill in your own values. `.env.local` is git-ignored; never commit real credentials:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   ```
+   DATABASE_URL=mysql://<user>:<password>@localhost:3306/<database>
+   ```
+
+4. Apply the migrations:
+
+   ```bash
+   npm run db:migrate
+   ```
+
+Other scripts: `npm run db:generate` creates a new migration after editing `db/schema.ts`; `npm run db:studio` opens Drizzle Studio.
+
 ## Getting Started
 
 First, run the development server:
