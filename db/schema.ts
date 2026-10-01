@@ -79,10 +79,17 @@ export const tasks = mysqlTable(
     title: varchar("title", { length: 255 }).notNull(),
     notes: text("notes"),
     lifeArea: mysqlEnum("life_area", LIFE_AREAS).notNull(),
+    // One-time tasks only: at most one of these is set (no date = both null).
+    // Calendar dates, no time zone. Recurring tasks must never use them.
+    scheduledDate: date("scheduled_date", { mode: "string" }),
+    dueDate: date("due_date", { mode: "string" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
   },
-  (t) => [index("tasks_user_id_idx").on(t.userId)],
+  (t) => [
+    index("tasks_user_id_idx").on(t.userId),
+    check("tasks_single_date_check", sql`${t.scheduledDate} IS NULL OR ${t.dueDate} IS NULL`),
+  ],
 );
 
 // Exactly one rule per task (task_id is the primary key). One-time tasks

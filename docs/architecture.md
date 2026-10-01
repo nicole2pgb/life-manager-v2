@@ -43,9 +43,21 @@ This includes:
 
 The same business logic should be reusable across different views.
 
+## Calendar Dates
+
+Scheduled dates, due dates and completion dates are calendar dates (`YYYY-MM-DD`), not instants.
+
+- All code that needs "today" or the calendar date of an instant must use the central calendar-date module (`lib/dates/calendar-date.ts`). Do not convert dates with `toISOString()` or similar elsewhere.
+- The module works with an explicit IANA time zone. In the MVP every user is treated as living in one application-wide time zone (`APP_TIME_ZONE`, default `Europe/Berlin`), resolved through a single function. Per-user time zones are not supported yet.
+- Making the time zone user-configurable later only changes that resolver (for example to read it from user settings); callers and stored dates stay the same.
+- Scheduled and due dates are plain stored dates and need no time zone to be saved; the time zone matters when they are compared with "today" (Today, Weekly Overview, overdue state, Progress) and when a completion date is recorded.
+- Dashboard, Weekly Overview and Progress reuse this module.
+
 ## Recurrence
 
 Recurrence logic must not be implemented independently inside individual UI components.
+
+Recurring tasks are scheduled only by their recurrence rule. The scheduled date and due date exist only for one-time tasks (recurrence type none) and must not be combined with recurrence.
 
 Supported recurrence types:
 

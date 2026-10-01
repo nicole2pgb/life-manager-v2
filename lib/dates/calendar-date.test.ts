@@ -1,0 +1,118 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
+import {
+  calendarDateOf,
+  formatCalendarDate,
+  parseCalendarDate,
+  todayFor,
+} from "./calendar-date";
+import { getApplicationTimeZone, getUserTimeZone } from "./time-zone";
+
+const BERLIN = "Europe/Berlin";
+const LA = "America/Los_Angeles";
+
+describe("calendarDateOf", () => {
+  it("is the next day for zones ahead of UTC late in the UTC evening", () => {
+    expect(calendarDateOf(new Date("2026-10-01T23:30:00Z"), BERLIN)).toBe("2026-10-02");
+    expect(calendarDateOf(new Date("2026-10-01T23:30:00Z"), "UTC")).toBe("2026-10-01");
+  });
+  it("is the previous day for zones behind UTC early in the UTC morning", () => {
+    expect(calendarDateOf(new Date("2026-10-02T03:00:00Z"), LA)).toBe("2026-10-01");
+    expect(calendarDateOf(new Date("2026-10-02T03:00:00Z"), "UTC")).toBe("2026-10-02");
+  });
+  it("switches at Berlin midnight in summer time (UTC+2)", () => {
+    expect(calendarDateOf(new Date("2026-07-01T21:59:59Z"), BERLIN)).toBe("2026-07-01");
+    expect(calendarDateOf(new Date("2026-07-01T22:00:00Z"), BERLIN)).toBe("2026-07-02");
+  });
+  it("switches at Berlin midnight in winter time (UTC+1)", () => {
+    expect(calendarDateOf(new Date("2026-01-01T22:59:59Z"), BERLIN)).toBe("2026-01-01");
+    expect(calendarDateOf(new Date("2026-01-01T23:00:00Z"), BERLIN)).toBe("2026-01-02");
+  });
+  it("handles the spring DST change (2026-03-29)", () => {
+    // 01:59 CET (UTC+1) is still the 29th; the day is only 23 hours long.
+    expect(calendarDateOf(new Date("2026-03-28T23:00:00Z"), BERLIN)).toBe("2026-03-29");
+    expect(calendarDateOf(new Date("2026-03-29T21:59:59Z"), BERLIN)).toBe("2026-03-29");
+    expect(calendarDateOf(new Date("2026-03-29T22:00:00Z"), BERLIN)).toBe("2026-03-30");
+  });
+  it("handles the autumn DST change (2026-10-25)", () => {
+    // The day is 25 hours long: it ends at 23:00 UTC.
+    expect(calendarDateOf(new Date("2026-10-24T22:00:00Z"), BERLIN)).toBe("2026-10-25");
+    expect(calendarDateOf(new Date("2026-10-25T22:59:59Z"), BERLIN)).toBe("2026-10-25");
+    expect(calendarDateOf(new Date("2026-10-25T23:00:00Z"), BERLIN)).toBe("2026-10-26");
+  });
+  it("handles a year boundary", () => {
+    expect(calendarDateOf(new Date("2026-12-31T23:30:00Z"), BERLIN)).toBe("2027-01-01");
+  });
+});
+
+describe("todayFor", () => {
+  it("uses the injected instant", () => {
+    expect(todayFor(BERLIN, new Date("2026-10-01T22:30:00Z"))).toBe("2026-10-02");
+    expect(todayFor(LA, new Date("2026-10-01T22:30:00Z"))).toBe("2026-10-01");
+  });
+});
+
+describe("parseCalendarDate", () => {
+  it("accepts real dates, including leap day and the DATE limits", () => {
+    for (const value of ["2026-10-05", "2028-02-29", "1000-01-01", "9999-12-31"]) {
+      expect(parseCalendarDate(value)).toBe(value);
+    }
+  });
+  it("rejects impossible dates and wrong formats", () => {
+    for (const value of [
+      "2027-02-29",
+      "2026-02-30",
+      "2026-13-01",
+      "2026-00-10",
+      "2026-10-00",
+      "0999-12-31",
+      "10000-01-01",
+      "2026-1-5",
+      "05.10.2026",
+      "2026-10-05T00:00",
+      " 2026-10-05",
+      "",
+      "   ",
+    ]) {
+      expect(parseCalendarDate(value)).toBeNull();
+    }
+  });
+});
+
+describe("formatCalendarDate", () => {
+  it("uses the German day-first format", () => {
+    expect(formatCalendarDate("2026-10-05")).toBe("05.10.2026");
+  });
+  it("does not depend on the process time zone", () => {
+    const original = process.env.TZ;
+    try {
+      for (const tz of ["UTC", "Pacific/Kiritimati", "Pacific/Pago_Pago"]) {
+        process.env.TZ = tz;
+        expect(formatCalendarDate("2026-10-05")).toBe("05.10.2026");
+      }
+    } finally {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    }
+  });
+});
+
+describe("time zone resolver", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("defaults to Europe/Berlin", async () => {
+    vi.stubEnv("APP_TIME_ZONE", "");
+    expect(getApplicationTimeZone()).toBe("Europe/Berlin");
+    expect(await getUserTimeZone(1)).toBe("Europe/Berlin");
+  });
+  it("can be overridden with APP_TIME_ZONE", async () => {
+    vi.stubEnv("APP_TIME_ZONE", "America/New_York");
+    expect(await getUserTimeZone(1)).toBe("America/New_York");
+  });
+  it("fails with an error naming the variable when invalid", () => {
+    vi.stubEnv("APP_TIME_ZONE", "Not/AZone");
+    expect(() => getApplicationTimeZone()).toThrow(/APP_TIME_ZONE/);
+  });
+});

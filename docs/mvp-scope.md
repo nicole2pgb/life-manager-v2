@@ -26,6 +26,7 @@ Manage tasks → Complete today's tasks → Check weekly progress
 - Complete tasks
 - Optional notes
 - One-time tasks
+- Optional scheduled date or due date for one-time tasks (not both; recurring tasks use neither)
 
 ### Recurring Tasks
 
@@ -35,7 +36,7 @@ Manage tasks → Complete today's tasks → Check weekly progress
 
 ### Dashboard / Today
 
-- Show tasks relevant for today
+- Show tasks relevant for today (for one-time tasks with dates, see "Dates of One-Time Tasks" in `data-model.md`)
 - Complete tasks directly from the dashboard
 - Show current weekly progress
 
