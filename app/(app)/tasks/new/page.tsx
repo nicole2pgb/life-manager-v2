@@ -18,7 +18,16 @@ export default async function NewTaskPage() {
             action={createTaskAction}
             lifeAreas={LIFE_AREAS}
             submitLabel="Create task"
-            initial={{ title: "", notes: "", lifeArea: "Personal", dateKind: "none", date: "" }}
+            initial={{
+              title: "",
+              notes: "",
+              lifeArea: "Personal",
+              dateKind: "none",
+              date: "",
+              recurrence: "none",
+              weekdays: [],
+              timesPerWeek: "3",
+            }}
           />
         </div>
       </section>

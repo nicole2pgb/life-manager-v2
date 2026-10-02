@@ -3,5 +3,5 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname) } },
-  test: { include: ["lib/**/*.test.ts"] },
+  test: { include: ["lib/**/*.test.ts", "db/**/*.test.ts", "app/**/*.test.ts"] },
 });

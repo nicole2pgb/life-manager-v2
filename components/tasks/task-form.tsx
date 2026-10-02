@@ -11,6 +11,10 @@ export type TaskFormValues = {
   lifeArea: string;
   dateKind: "none" | "scheduled" | "due";
   date: string;
+  recurrence: "none" | "daily" | "weekdays" | "times_per_week";
+  // ISO weekday numbers as strings ("1" = Monday ... "7" = Sunday).
+  weekdays: string[];
+  timesPerWeek: string;
 };
 
 const inputClass =
@@ -23,6 +27,23 @@ const DATE_OPTIONS = [
   { value: "none", label: "No date", hint: "Not tied to a day." },
   { value: "scheduled", label: "Scheduled for", hint: "Happens on this day." },
   { value: "due", label: "Due by", hint: "Deadline for this task." },
+] as const;
+
+const RECURRENCE_OPTIONS = [
+  { value: "none", label: "Does not repeat", hint: "A one-time task." },
+  { value: "daily", label: "Every day", hint: "Shows up daily." },
+  { value: "weekdays", label: "Specific weekdays", hint: "Pick the days." },
+  { value: "times_per_week", label: "Times per week", hint: "A weekly target, any days." },
+] as const;
+
+const WEEKDAY_OPTIONS = [
+  { value: "1", short: "Mon", label: "Monday" },
+  { value: "2", short: "Tue", label: "Tuesday" },
+  { value: "3", short: "Wed", label: "Wednesday" },
+  { value: "4", short: "Thu", label: "Thursday" },
+  { value: "5", short: "Fri", label: "Friday" },
+  { value: "6", short: "Sat", label: "Saturday" },
+  { value: "7", short: "Sun", label: "Sunday" },
 ] as const;
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -40,6 +61,7 @@ export function TaskForm({
   submitLabel,
   taskId,
   dateLocked,
+  historyLocked,
 }: {
   action: (prev: TaskFormState, data: FormData) => Promise<TaskFormState>;
   initial: TaskFormValues;
@@ -49,6 +71,9 @@ export function TaskForm({
   taskId?: number;
   // Completed tasks keep their date: it is shown read-only and not submitted.
   dateLocked?: { label: string | null };
+  // A recurring task with completion history cannot become a one-time task.
+  // Convenience only: the server enforces it independently.
+  historyLocked?: boolean;
 }) {
   const [state, formAction] = useActionState(action, null);
   const errors = state?.errors;
@@ -58,6 +83,9 @@ export function TaskForm({
   const [lifeArea, setLifeArea] = useState(initial.lifeArea);
   const [dateKind, setDateKind] = useState<TaskFormValues["dateKind"]>(initial.dateKind);
   const [date, setDate] = useState(initial.date);
+  const [recurrence, setRecurrence] = useState<TaskFormValues["recurrence"]>(initial.recurrence);
+  const [weekdays, setWeekdays] = useState<string[]>(initial.weekdays);
+  const [timesPerWeek, setTimesPerWeek] = useState(initial.timesPerWeek);
 
   return (
     <form action={formAction} className="flex flex-col gap-5" noValidate>
@@ -107,6 +135,92 @@ export function TaskForm({
         <FieldError id="notes-error" message={errors?.notes} />
       </div>
 
+      <fieldset
+        className="flex flex-col gap-2"
+        aria-describedby={errors?.recurrence ? "recurrence-error" : undefined}
+      >
+        <legend className="text-sm font-medium">Repeats</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {RECURRENCE_OPTIONS.map((option) => {
+            const disabled = option.value === "none" && historyLocked;
+            return (
+              <div key={option.value} className="flex flex-col gap-1">
+                <label className={`relative flex flex-col ${disabled ? "opacity-50" : ""}`}>
+                  <input
+                    type="radio"
+                    name="recurrence"
+                    value={option.value}
+                    checked={recurrence === option.value}
+                    disabled={disabled}
+                    onChange={() => setRecurrence(option.value)}
+                    aria-describedby={`recurrence-${option.value}-hint`}
+                    className="peer sr-only"
+                  />
+                  <span className={`${pillClass} ${disabled ? "cursor-not-allowed" : ""}`}>{option.label}</span>
+                </label>
+                <span id={`recurrence-${option.value}-hint`} className="px-1 text-xs text-muted">
+                  {disabled
+                    ? "Not available: this task can't be converted to one-time while recurring completion history exists. Create a new one-time task instead."
+                    : option.hint}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        {recurrence === "weekdays" ? (
+          <div className="flex flex-col gap-1.5">
+            <span id="weekdays-label" className="text-sm font-medium">
+              Days
+            </span>
+            <div role="group" aria-labelledby="weekdays-label" className="flex flex-wrap gap-2">
+              {WEEKDAY_OPTIONS.map((day) => (
+                <label key={day.value} className="relative">
+                  <input
+                    type="checkbox"
+                    name="weekdays"
+                    value={day.value}
+                    checked={weekdays.includes(day.value)}
+                    onChange={(e) =>
+                      setWeekdays((current) =>
+                        e.target.checked ? [...current, day.value] : current.filter((v) => v !== day.value),
+                      )
+                    }
+                    aria-label={day.label}
+                    className="peer sr-only"
+                  />
+                  <span className={`${pillClass} min-w-12`}>{day.short}</span>
+                </label>
+              ))}
+            </div>
+            <FieldError id="weekdays-error" message={errors?.weekdays} />
+          </div>
+        ) : null}
+        {recurrence === "times_per_week" ? (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="timesPerWeek" className="text-sm font-medium">
+              Times per week
+            </label>
+            <input
+              id="timesPerWeek"
+              name="timesPerWeek"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={7}
+              step={1}
+              value={timesPerWeek}
+              onChange={(e) => setTimesPerWeek(e.target.value)}
+              aria-invalid={errors?.timesPerWeek ? true : undefined}
+              aria-describedby={errors?.timesPerWeek ? "timesPerWeek-error" : undefined}
+              className={`${inputClass} h-11 sm:w-32`}
+            />
+            <FieldError id="timesPerWeek-error" message={errors?.timesPerWeek} />
+          </div>
+        ) : null}
+        <FieldError id="recurrence-error" message={errors?.recurrence} />
+      </fieldset>
+
+      {recurrence === "none" ? (
       <fieldset
         className="flex flex-col gap-2"
         aria-describedby={errors?.date ? "date-error" : undefined}
@@ -162,6 +276,7 @@ export function TaskForm({
           </>
         )}
       </fieldset>
+      ) : null}
 
       <fieldset
         className="flex flex-col gap-2"

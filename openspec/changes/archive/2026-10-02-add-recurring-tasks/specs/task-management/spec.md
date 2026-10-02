@@ -1,21 +1,6 @@
-# task-management Specification
+# Spec Delta
 
-## Purpose
-
-Lets an authenticated user keep a personal list of tasks, one-time or recurring: view, create, edit, delete and mark them completed or incomplete (recurring tasks per day), with every operation strictly limited to the user's own tasks.
-
-## Requirements
-
-### Requirement: Task pages require an authenticated user
-The system SHALL make the task list and every task operation available only to an authenticated user. A visitor without a valid session MUST be redirected to `/login` and MUST NOT receive any task data.
-
-#### Scenario: Unauthenticated visit to the task list
-- **WHEN** a visitor without a valid session opens `/tasks`
-- **THEN** they are redirected to `/login` and no task data is returned
-
-#### Scenario: Unauthenticated task operation
-- **WHEN** a create, edit, delete or complete request is sent without a valid session
-- **THEN** no task is created or changed and the request does not succeed
+## MODIFIED Requirements
 
 ### Requirement: Users see only their own tasks
 The system SHALL show at `/tasks` exactly the tasks owned by the authenticated user. For each task it SHALL show the title, the notes (when present), its date (a scheduled date or a due date, when present; recurring tasks have none), the life area and whether the task is completed. A recurring task SHALL additionally show its recurrence in words (for example "Every day", "Mon, Thu" or "3 times per week"), and a times-per-week task SHALL show its count for the current calendar week. For a one-time task "completed" means it has been completed; for a recurring task it means it is done for today (the current calendar date), and it is never shown as permanently completed. Incomplete tasks SHALL be listed before completed tasks, and within each group the most recently created task SHALL come first. When the user has no tasks, the page SHALL show an empty state with a way to create the first task. Recurring tasks are always listed, and the passing of a day never removes them. A task's scheduled date or due date MUST NOT affect whether it is listed: an incomplete task remains listed after its date has passed, with its original date, until the user completes or deletes it, and the passing of a date MUST NEVER automatically hide, complete or delete a task.
@@ -310,25 +295,6 @@ The system SHALL let an authenticated user change the title, notes, life area an
 - **WHEN** a user edits the title of a completed task
 - **THEN** the task remains completed with the new title
 
-### Requirement: Users can delete their own tasks
-The system SHALL let an authenticated user delete a task they own. The system MUST require an explicit confirmation before a task is deleted; a single click on the delete control alone MUST NOT delete it. Deleting a task SHALL also remove its recurrence rule and completion records, and MUST NOT affect any other task.
-
-#### Scenario: Delete requires confirmation
-- **WHEN** a user activates the delete control of a task
-- **THEN** a confirmation step is shown and the task is not deleted until the user confirms
-
-#### Scenario: Cancelling keeps the task
-- **WHEN** a user cancels the confirmation step
-- **THEN** the task remains in the list unchanged
-
-#### Scenario: Confirmed deletion
-- **WHEN** a user confirms deletion of their task
-- **THEN** the task disappears from their list and its recurrence rule and completion records no longer exist
-
-#### Scenario: Other tasks unaffected
-- **WHEN** a user deletes one of their tasks
-- **THEN** all their other tasks and all other users' tasks are unchanged
-
 ### Requirement: Users can mark tasks completed and incomplete
 The system SHALL let an authenticated user mark a task they own as completed, and mark a completed task as incomplete again, directly from the task list. The new state MUST be persisted on the server, and MUST be shown after a reload. For a recurring task the control marks it done or not done for the current calendar date only, as defined by the recurring-tasks capability: the task itself is never completed, marking it done is accepted only while the task is relevant today, and un-completing removes only today's completion and is always accepted. The rest of this requirement describes one-time tasks. Completing a task SHALL be recorded as a completion for the current calendar date as determined by the application's calendar-date rules (see the requirement on calendar dates); marking it incomplete SHALL remove its completion. The completion date is independent of the task's scheduled date and due date: completing or uncompleting a task MUST NOT change either, and neither date affects whether or when the task can be completed (a task may be completed before, on or after its date). Completing a task preserves its scheduled date or due date. Completing an already completed task or uncompleting an incomplete task MUST leave the task unchanged and MUST NOT create duplicate completion records.
 
@@ -372,52 +338,6 @@ The system SHALL let an authenticated user mark a task they own as completed, an
 - **WHEN** a one-time task is completed
 - **THEN** it behaves exactly as before, with a single completion and its date preserved
 
-### Requirement: Calendar dates follow one central definition of the user's day
-The system SHALL determine "today" and the calendar date of any instant through one central calendar-date definition, not through ad-hoc conversions at each use. A calendar date is a day (`YYYY-MM-DD`) without time of day or time zone. For the MVP all users SHALL be treated as living in one application-wide time zone, which is configurable by deployment and has a documented default; the definition MUST be structured so that a per-user time zone can be introduced later without changing stored dates or callers' expectations. The calendar date of an instant is the date shown on a wall clock in that time zone at that instant.
-
-#### Scenario: Day boundary ahead of UTC
-- **WHEN** the application time zone is ahead of UTC (for example Europe/Berlin) and the instant is 2026-10-01 23:30 UTC
-- **THEN** the calendar date is 2026-10-02
-
-#### Scenario: Day boundary behind UTC
-- **WHEN** the application time zone is behind UTC (for example America/Los_Angeles) and the instant is 2026-10-02 03:00 UTC
-- **THEN** the calendar date is 2026-10-01
-
-#### Scenario: Daylight saving transitions
-- **WHEN** the instants just before and after a daylight-saving change in the application time zone are converted
-- **THEN** each instant maps to the date on the local wall clock in that zone
-
-#### Scenario: Completion recorded on the user's day
-- **WHEN** a user in the application time zone completes a task at 00:30 local time on 2026-10-02 (which is 2026-10-01 22:30 UTC)
-- **THEN** the completion is recorded for 2026-10-02
-
-#### Scenario: Stored dates do not shift
-- **WHEN** a scheduled date, due date or completion date is stored and read back under a different server or database time zone
-- **THEN** the same calendar date is returned
-
-### Requirement: Task operations are scoped to the authenticated user
-Every task read and write MUST be limited to tasks owned by the authenticated user. The identity of the user SHALL be taken only from the server-side session, never from form fields, URL parameters or other request input. A task belonging to another user MUST behave exactly like a task that does not exist: the user can neither read, edit, complete, uncomplete nor delete it, and the response MUST NOT reveal whether such a task exists.
-
-#### Scenario: Opening another user's task for editing
-- **WHEN** user A requests the edit page for a task owned by user B
-- **THEN** the same not-found response is returned as for a task identifier that does not exist, and none of user B's task data is shown
-
-#### Scenario: Editing another user's task
-- **WHEN** user A submits an edit for the identifier of a task owned by user B
-- **THEN** user B's task is unchanged and the request fails as not found
-
-#### Scenario: Deleting another user's task
-- **WHEN** user A submits a delete for the identifier of a task owned by user B
-- **THEN** user B's task still exists and the request fails as not found
-
-#### Scenario: Completing or uncompleting another user's task
-- **WHEN** user A submits a complete or incomplete request for the identifier of a task owned by user B
-- **THEN** no completion record is created or removed for user B's task and the request fails as not found
-
-#### Scenario: Identifier that does not exist
-- **WHEN** a user requests, edits, completes or deletes a task identifier that does not exist or is malformed
-- **THEN** the request fails as not found and nothing is changed
-
 ### Requirement: Date entry makes the two kinds of date understandable
 When the task does not repeat, the create and edit forms SHALL present the date choice as three clearly labelled options: "No date", "Scheduled for" (the task happens on that day) and "Due by" (the deadline for the task), each with a short explanatory hint, and SHALL show the date choice and field only for a task that does not repeat, and the date field only when "Scheduled for" or "Due by" is chosen. Selecting "No date" SHALL clear the date. The date field SHALL accept past, current and future dates and SHALL be read-only for a completed task. Dates SHALL be displayed in the German day-first format `DD.MM.YYYY`.
 
@@ -437,20 +357,13 @@ When the task does not repeat, the create and edit forms SHALL present the date 
 - **WHEN** a recurring type is selected in the form
 - **THEN** the date choice and date field are not shown, and they reappear when "does not repeat" is selected again
 
-### Requirement: Task screens follow the visual reference and are usable on small screens
-The task list and the create and edit forms SHALL follow the dark theme with pink accent and rounded cards shown in `docs/ui-reference/tasks.png`, `create-task.png` and `edit-task.png`, showing the life area as a labelled badge, a round completion control and edit and delete controls on each task. Controls MUST have accessible names, and completed tasks MUST be distinguishable by more than color. The pages MUST remain usable at a 375 px viewport width without horizontal scrolling. Failed operations SHALL show a useful error message instead of a blank or crashed page.
+## REMOVED Requirements
 
-#### Scenario: Completed task is visually distinct
-- **WHEN** a task is completed
-- **THEN** it is shown with a filled completion control and struck-through title
+### Requirement: Task management creates only one-time tasks
+**Reason**: Recurring tasks are now supported. The rule that a task never combines recurrence with a scheduled or due date, and that dates have no effect on listing, order or overdue state in this capability, is retained by the modified requirements above and by the recurring-tasks capability.
+**Migration**: One-time tasks keep a recurrence rule of type none and unchanged behavior. The forms now additionally offer the recurrence choice; the statements that dates do not change list order or style remain true and are covered by the existing ordering scenario of the list requirement.
 
-#### Scenario: Small screen layout
-- **WHEN** the task list and forms are viewed at 375 px width
-- **THEN** all content and controls are reachable without horizontal scrolling
-
-#### Scenario: Operation fails unexpectedly
-- **WHEN** saving, completing or deleting a task fails because of a server or database error
-- **THEN** the user sees an error message and the previous persisted state remains shown
+## ADDED Requirements
 
 ### Requirement: Task forms offer recurrence without mixing it with dates
 The create and edit forms SHALL offer a "Repeats" choice with the options "Does not repeat", "Every day", "Specific weekdays" and "Times per week", each with a short hint. "Does not repeat" SHALL be preselected on creation and shows the date choice. "Specific weekdays" SHALL show seven weekday toggles (Monday to Sunday, in that order) with accessible names; "Times per week" SHALL show a numeric target input from 1 to 7. Choosing a recurring option hides the date choice and date field. When editing a recurring task that has completion history, the "Does not repeat" option SHALL NOT be selectable and the form SHALL explain that such a task cannot be converted to one-time while recurring completion history exists (the server enforces this independently). Entered values SHALL be kept when validation fails. Controls MUST have accessible names and remain usable at 375 px width without horizontal scrolling, following the existing visual reference. The forms offer no other fields than title, notes, recurrence (with weekdays or target), date choice (one-time only) and life area.
@@ -470,3 +383,4 @@ The create and edit forms SHALL offer a "Repeats" choice with the options "Does 
 #### Scenario: Small screen
 - **WHEN** the forms are viewed at 375 px width with "Specific weekdays" selected
 - **THEN** all weekday toggles are reachable without horizontal scrolling
+

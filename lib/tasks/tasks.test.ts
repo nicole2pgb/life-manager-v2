@@ -8,6 +8,9 @@ const base: TaskInput = {
   lifeArea: "Health",
   dateKind: "none",
   date: null,
+  recurrence: "none",
+  weekdays: [],
+  timesPerWeek: null,
 };
 
 const create = (overrides: Partial<TaskInput> = {}) =>
@@ -143,5 +146,73 @@ describe("parseTaskId", () => {
     for (const value of ["0", "-3", "abc", "1.5", "", "01", " 1", "1e3", "99999999999999999999", null, undefined, 1]) {
       expect(parseTaskId(value)).toBeNull();
     }
+  });
+});
+
+describe("recurrence rules", () => {
+  it("keeps one-time tasks one-time", () => {
+    expect(valueOf(create()).rule).toEqual({ type: "none" });
+  });
+  it("accepts daily and ignores stray weekdays and target", () => {
+    const value = valueOf(create({ recurrence: "daily", weekdays: ["1", "2"], timesPerWeek: "3" }));
+    expect(value.rule).toEqual({ type: "daily" });
+    expect(value.schedule).toBeUndefined();
+  });
+  it("accepts weekdays, normalizing to sorted distinct ISO numbers", () => {
+    expect(valueOf(create({ recurrence: "weekdays", weekdays: ["4", "1", "1"] })).rule).toEqual({
+      type: "weekdays",
+      weekdays: [1, 4],
+    });
+    expect(valueOf(create({ recurrence: "weekdays", weekdays: ["7"], timesPerWeek: "9" })).rule).toEqual({
+      type: "weekdays",
+      weekdays: [7],
+    });
+  });
+  it("rejects weekdays without a selection or with invalid values", () => {
+    expect(errorsOf(create({ recurrence: "weekdays", weekdays: [] })).weekdays).toBeDefined();
+    for (const bad of ["0", "8", "abc", "", "1.5", "-1", "01"]) {
+      expect(errorsOf(create({ recurrence: "weekdays", weekdays: ["1", bad] })).weekdays).toBeDefined();
+    }
+  });
+  it("accepts times per week from 1 to 7 and ignores stray weekdays", () => {
+    for (const n of [1, 2, 7]) {
+      expect(valueOf(create({ recurrence: "times_per_week", timesPerWeek: String(n), weekdays: ["1"] })).rule).toEqual({
+        type: "times_per_week",
+        timesPerWeek: n,
+      });
+    }
+  });
+  it("rejects a malformed or out-of-range weekly target", () => {
+    for (const bad of ["0", "8", "2.5", "two", "", "  ", "-1", "10", null]) {
+      expect(errorsOf(create({ recurrence: "times_per_week", timesPerWeek: bad })).timesPerWeek).toBeDefined();
+    }
+  });
+  it("rejects an unknown or missing recurrence type on create and update", () => {
+    for (const recurrence of ["monthly", "", "DAILY", null]) {
+      expect(errorsOf(create({ recurrence })).recurrence).toBeDefined();
+      expect(errorsOf(update({ recurrence })).recurrence).toBeDefined();
+    }
+  });
+  it("rejects recurrence combined with a scheduled or due date", () => {
+    for (const recurrence of ["daily", "weekdays", "times_per_week"]) {
+      for (const dateKind of ["scheduled", "due"]) {
+        const errors = errorsOf(
+          create({ recurrence, dateKind, date: "2026-10-10", weekdays: ["1"], timesPerWeek: "3" }),
+        );
+        expect(errors.recurrence).toBeDefined();
+      }
+    }
+  });
+  it("accepts recurrence with 'no date' or no date field", () => {
+    expect(valueOf(create({ recurrence: "daily", dateKind: "none" })).rule).toEqual({ type: "daily" });
+    expect(valueOf(update({ recurrence: "daily", dateKind: null })).rule).toEqual({ type: "daily" });
+  });
+  it("does not use the date for recurring tasks, even an invalid one with no date choice", () => {
+    expect(valueOf(create({ recurrence: "daily", dateKind: "none", date: "nonsense" })).rule).toEqual({ type: "daily" });
+  });
+  it("still validates the other fields for recurring tasks", () => {
+    const errors = errorsOf(create({ recurrence: "daily", title: " ", lifeArea: "x" }));
+    expect(errors.title).toBeDefined();
+    expect(errors.lifeArea).toBeDefined();
   });
 });

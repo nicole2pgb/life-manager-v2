@@ -53,7 +53,9 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 The app requires an account. After `npm run db:migrate` and `npm run dev`, open http://localhost:3000, choose **Create account**, and register with a name, email and a password of 8–72 bytes (UTF-8). You are then signed in and land on `/profile`; **Log out** ends the session. Sessions last 30 days.
 
-Run the unit tests (password validation, hashing, token hashing) with `npm test`.
+Run the unit tests (authentication, calendar dates, task validation, recurrence) with `npm test`.
+
+The database-backed task tests (`db/`, `app/**/actions.test.ts`) are skipped unless `TEST_DATABASE_URL` points at a migrated MySQL database, for example `TEST_DATABASE_URL="$DATABASE_URL" npm test`. They create users with unique `@example.test` emails and delete them afterwards, but use a disposable database rather than one holding data you care about.
 
 ## Learn More
 

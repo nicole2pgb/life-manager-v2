@@ -108,11 +108,11 @@ The task does not repeat.
 
 ### Daily
 
-The task is scheduled every day.
+The task is relevant every day.
 
 ### Specific Weekdays
 
-The task is scheduled on selected weekdays.
+The task is relevant only on the selected weekdays (stored as ISO weekday numbers, Monday = 1 … Sunday = 7, sorted and distinct; at least one).
 
 Example:
 
@@ -120,11 +120,20 @@ Monday + Thursday
 
 ### Times Per Week
 
-The task has a weekly completion target without fixed weekdays.
+The task has a weekly completion target (1–7) without fixed weekdays. It is relevant on each day of the current calendar week while the number of completion dates in that week is below the target, and on a day on which it was completed. Once the target is reached it is not relevant on the remaining days of the week; a new week resets the count. Weeks run Monday–Sunday in the MVP (the week-start helpers take a parameter for a later user setting).
 
 Example:
 
 Gym → 3 times per week
+
+### Rules
+
+- Relevance is defined once, in `lib/tasks/recurrence.ts` (`isRelevantOn`); Today and Weekly Overview reuse it. The general task management list is not filtered by relevance.
+- A recurring task has no scheduled date or due date.
+- A task may change between recurring types at any time; existing completions are kept and the new rule governs relevance from then on.
+- An incomplete one-time task may become recurring (its date is cleared); a completed one-time task may not until it is marked incomplete.
+- A recurring task may become one-time only if it has no completion history at all; otherwise the change is rejected. History is never deleted or migrated by an edit.
+- Whether relevance applies to dates before a task's creation is decided by the Weekly Overview change.
 
 ---
 
@@ -151,6 +160,12 @@ Wednesday → completed
 Friday → completed
 
 The Gym task itself is not deleted or permanently marked as completed.
+
+Rules for recurring tasks:
+
+- A completion is recorded only for the current calendar date, and only while the task is relevant that day (a weekday task not on other days; a times-per-week task not beyond its weekly target). Re-completing a day that is already done changes nothing.
+- Un-completing removes only the current day's completion and is always allowed.
+- A shown weekly count never exceeds the target. If the target is lowered below the stored count, all completion rows stay and the count is shown as the target.
 
 ---
 

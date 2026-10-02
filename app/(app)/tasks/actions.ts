@@ -3,10 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { createTask, deleteTask, setTaskCompleted, updateTask } from "@/db/tasks";
-import { todayFor } from "@/lib/dates/calendar-date";
-import { getUserTimeZone } from "@/lib/dates/time-zone";
+import { getTodayFor } from "@/lib/dates/time-zone";
 import { getCurrentUser } from "@/lib/auth/session";
-import type { TaskFormState } from "@/lib/tasks/form-state";
+import { NOT_RELEVANT_NOTICE, type TaskFormState } from "@/lib/tasks/form-state";
 import { parseTaskId, validateTaskInput, type TaskInput } from "@/lib/tasks/validation";
 
 // Only whitelisted fields are read; a user id is never taken from the request.
@@ -32,6 +31,9 @@ function readTaskInput(data: FormData): TaskInput {
     lifeArea: text(data, "lifeArea"),
     dateKind: optionalText(data, "dateKind"),
     date: optionalText(data, "date"),
+    recurrence: optionalText(data, "recurrence"),
+    weekdays: data.getAll("weekdays").filter((value): value is string => typeof value === "string"),
+    timesPerWeek: optionalText(data, "timesPerWeek"),
   };
 }
 
@@ -43,8 +45,7 @@ export async function createTaskAction(_prev: TaskFormState, data: FormData): Pr
   if (!result.ok) return { errors: result.errors };
 
   try {
-    const { schedule, ...rest } = result.value;
-    await createTask(userId, { ...rest, schedule: schedule ?? { kind: "none" } });
+    await createTask(userId, result.value);
   } catch (error) {
     console.error("createTask failed", error);
     return { errors: { form: SAVE_FAILED } };
@@ -74,6 +75,19 @@ export async function updateTaskAction(_prev: TaskFormState, data: FormData): Pr
       errors: { date: "A completed task's date can't be changed. Mark the task as incomplete first." },
     };
   }
+  if (outcome === "recurrence_locked") {
+    return {
+      errors: { recurrence: "A completed task can't become a repeating task. Mark the task as incomplete first." },
+    };
+  }
+  if (outcome === "history_locked") {
+    return {
+      errors: {
+        recurrence:
+          "This task can't be converted to a one-time task because it already has recurring completion history. Create a new one-time task instead.",
+      },
+    };
+  }
   revalidatePath("/tasks");
   redirect("/tasks");
 }
@@ -92,8 +106,10 @@ export async function setTaskCompletedAction(data: FormData): Promise<void> {
   const taskId = parseTaskId(data.get("taskId"));
   const desired = data.get("completed");
   if (taskId !== null && (desired === "true" || desired === "false")) {
-    const completedOn = todayFor(await getUserTimeZone(userId));
-    await setTaskCompleted(userId, taskId, desired === "true", completedOn);
+    // Only the current calendar date is ever used; a date in the request is ignored.
+    const today = await getTodayFor(userId);
+    const outcome = await setTaskCompleted(userId, taskId, desired === "true", today);
+    if (outcome === "not_relevant") redirect(`/tasks?notice=${NOT_RELEVANT_NOTICE}`);
   }
   revalidatePath("/tasks");
   redirect("/tasks");

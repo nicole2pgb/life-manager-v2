@@ -51,6 +51,8 @@ Scheduled dates, due dates and completion dates are calendar dates (`YYYY-MM-DD`
 - The module works with an explicit IANA time zone. In the MVP every user is treated as living in one application-wide time zone (`APP_TIME_ZONE`, default `Europe/Berlin`), resolved through a single function. Per-user time zones are not supported yet.
 - Making the time zone user-configurable later only changes that resolver (for example to read it from user settings); callers and stored dates stay the same.
 - Scheduled and due dates are plain stored dates and need no time zone to be saved; the time zone matters when they are compared with "today" (Today, Weekly Overview, overdue state, Progress) and when a completion date is recorded.
+- Weekday and week arithmetic (`isoWeekday`, `addDays`, `startOfWeek`, `endOfWeek`) lives in the same module and works on the calendar date only (UTC parts, no local time), so it never shifts with the server time zone or daylight-saving changes. Weekdays are ISO numbers (Monday = 1 … Sunday = 7).
+- Weeks run Monday–Sunday in the MVP. The week-start argument defaults to Monday; a later user setting only changes the argument callers pass.
 - Dashboard, Weekly Overview and Progress reuse this module.
 
 ## Recurrence

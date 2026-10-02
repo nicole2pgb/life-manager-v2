@@ -40,10 +40,10 @@ Detailed requirements for larger features should be defined through OpenSpec bef
 
 ### 4. Recurring Tasks
 
-- [ ] Daily recurrence
-- [ ] Specific weekdays
-- [ ] X times per week
-- [ ] Completion tracking for recurring tasks
+- [x] Daily recurrence
+- [x] Specific weekdays
+- [x] X times per week
+- [x] Completion tracking for recurring tasks
 
 ### 5. Dashboard / Today
 
