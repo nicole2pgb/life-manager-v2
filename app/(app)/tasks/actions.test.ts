@@ -177,7 +177,7 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
       actions.setTaskCompletedAction(form({ taskId: String(created!.id), completed: "true", returnTo: "/dashboard" })),
     );
     expect(to).toBe("/dashboard");
-    expect(vi.mocked(revalidatePath).mock.calls.map(([path]) => path).sort()).toEqual(["/dashboard", "/tasks", "/weekly-overview"]);
+    expect(vi.mocked(revalidatePath).mock.calls.map(([path]) => path).sort()).toEqual(["/dashboard", "/progress", "/tasks", "/weekly-overview"]);
     expect(await completions(created!.id)).toEqual(["2026-10-06"]);
   });
 
@@ -204,12 +204,12 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
     vi.mocked(revalidatePath).mockClear();
     const { created } = await create({ recurrence: "daily" });
     const paths = () => vi.mocked(revalidatePath).mock.calls.map(([path]) => path);
-    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview"]));
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview", "/progress"]));
     vi.mocked(revalidatePath).mockClear();
     await redirected(actions.updateTaskAction(null, form({ ...common, taskId: String(created!.id), recurrence: "daily" })));
-    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview"]));
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview", "/progress"]));
     vi.mocked(revalidatePath).mockClear();
     await redirected(actions.deleteTaskAction(form({ taskId: String(created!.id) })));
-    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview"]));
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview", "/progress"]));
   });
 });

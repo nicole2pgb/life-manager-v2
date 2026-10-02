@@ -1,14 +1,13 @@
 import type { LifeArea } from "@/db/schema";
 import { addDays, endOfWeek, isoWeekday, parseCalendarDate, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
-import { weekOccurrences, type PlanningTask } from "./planning";
+import { dayOccurrence, weekOccurrences, type PlanningTask } from "./planning";
 
 // Builds the Weekly Overview from plain task data. Pure: no database, no clock,
-// no time zone. Day placement uses the same conditions as `weekOccurrences`
-// (creation date, dated one-time tasks in the week of their date), so the
-// entries here always add up to the planned occurrences of the Dashboard's
-// weekly progress. Weeks run Monday to Sunday; the week start is deliberately
-// not read from user settings (the Settings feature changes all week-based
-// behavior together).
+// no time zone. Day placement comes from `dayOccurrence` in planning.ts, the
+// same definition `weekOccurrences` counts, so the entries here always add up
+// to the planned occurrences of the Dashboard's weekly progress. Weeks run
+// Monday to Sunday; the week start is deliberately not read from user settings
+// (the Settings feature changes all week-based behavior together).
 
 export type WeeklyOverviewTaskInput = PlanningTask & {
   id: number;
@@ -102,33 +101,19 @@ export function buildWeeklyOverview(
   const openTasks: OpenTaskItem[] = [];
 
   for (const task of tasks) {
-    const { id, title, lifeArea, rule, completionDates } = task;
-    switch (rule.type) {
-      case "daily":
-      case "weekdays":
-        for (const day of days) {
-          if (day.date < task.createdOn) continue;
-          if (rule.type === "weekdays" && !rule.weekdays.includes(day.weekday)) continue;
-          day.items.push({ id, title, lifeArea, done: completionDates.has(day.date), kind: "recurring" });
-        }
-        break;
-      case "times_per_week": {
-        const { planned, completed } = weekOccurrences(task, weekStart);
-        if (planned > 0) frequency.push({ id, title, lifeArea, completed, planned });
-        break;
-      }
-      case "none": {
-        const date = task.scheduledDate ?? task.dueDate;
-        const done = completionDates.size > 0;
-        if (date === null) {
-          if (!done) openTasks.push({ id, title, lifeArea });
-          break;
-        }
-        // The task's own date decides the column, whatever its completion date.
-        const day = days.find((d) => d.date === date);
-        if (day) day.items.push({ id, title, lifeArea, done, kind: task.scheduledDate !== null ? "scheduled" : "due" });
-        break;
-      }
+    const { id, title, lifeArea } = task;
+    // Day columns: whatever dayOccurrence places on a day (daily, weekday and
+    // dated one-time tasks). It is also what weekOccurrences counts.
+    for (const day of days) {
+      const occurrence = dayOccurrence(task, day.date);
+      if (occurrence) day.items.push({ id, title, lifeArea, done: occurrence.done, kind: occurrence.kind });
+    }
+    if (task.rule.type === "times_per_week") {
+      const { planned, completed } = weekOccurrences(task, weekStart);
+      if (planned > 0) frequency.push({ id, title, lifeArea, completed, planned });
+    } else if (task.rule.type === "none") {
+      const undated = task.scheduledDate === null && task.dueDate === null;
+      if (undated && task.completionDates.size === 0) openTasks.push({ id, title, lifeArea });
     }
   }
 

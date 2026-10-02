@@ -1,8 +1,9 @@
 import "server-only";
 
 import { and, asc, between, desc, eq, inArray, or, sql } from "drizzle-orm";
-import { calendarDateOf, endOfWeek, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
+import { addDays, calendarDateOf, endOfWeek, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
 import { buildDashboard, type Dashboard, type DashboardTaskInput } from "@/lib/tasks/dashboard";
+import { buildProgress, type Progress } from "@/lib/tasks/progress";
 import { buildWeeklyOverview, type WeeklyOverview } from "@/lib/tasks/weekly-overview";
 import type { LifeArea } from "./schema";
 import { cappedWeekCount, isRelevantOn, type RecurrenceRule } from "@/lib/tasks/recurrence";
@@ -186,12 +187,17 @@ export async function listTasks(userId: number, today: CalendarDate): Promise<Ta
 }
 
 // The user's tasks as plain planning data, newest created first. Completions
-// are loaded for the Monday-Sunday week starting at `weekStart`, plus every
-// completion of one-time tasks (their single completion decides "completed
-// today" and the dated week's progress whatever its date). `timeZone` only
-// converts creation instants to calendar dates. Shared by the Dashboard and the
-// Weekly Overview so both read the same data the same way.
-async function loadPlanningTasks(userId: number, weekStart: CalendarDate, timeZone: string): Promise<DashboardTaskInput[]> {
+// are loaded for the calendar dates `from` through `to` (whole Monday-Sunday
+// weeks), plus every completion of one-time tasks (their single completion
+// decides "completed today" and the dated week's progress whatever its date).
+// `timeZone` only converts creation instants to calendar dates. Shared by the
+// Dashboard, the Weekly Overview and Progress so all read the same data the
+// same way.
+async function loadPlanningTasks(
+  userId: number,
+  range: { from: CalendarDate; to: CalendarDate },
+  timeZone: string,
+): Promise<DashboardTaskInput[]> {
   const rows = await getDb()
     .select(taskSelection)
     .from(tasks)
@@ -201,7 +207,7 @@ async function loadPlanningTasks(userId: number, weekStart: CalendarDate, timeZo
   const completions = new Map<number, Set<CalendarDate>>();
   if (rows.length > 0) {
     const oneTimeIds = rows.filter((row) => (row.ruleType ?? "none") === "none").map((row) => row.id);
-    const inRange = between(taskCompletions.completedOn, weekStart, endOfWeek(weekStart));
+    const inRange = between(taskCompletions.completedOn, range.from, range.to);
     const found = await getDb()
       .select({ taskId: taskCompletions.taskId, completedOn: taskCompletions.completedOn })
       .from(taskCompletions)
@@ -234,7 +240,8 @@ async function loadPlanningTasks(userId: number, weekStart: CalendarDate, timeZo
 
 // Everything the Dashboard shows, for one user.
 export async function getDashboard(userId: number, today: CalendarDate, timeZone: string): Promise<Dashboard> {
-  return buildDashboard(await loadPlanningTasks(userId, startOfWeek(today), timeZone), today);
+  const weekStart = startOfWeek(today);
+  return buildDashboard(await loadPlanningTasks(userId, { from: weekStart, to: endOfWeek(weekStart) }, timeZone), today);
 }
 
 // The Weekly Overview of the Monday-Sunday week starting at `weekStart`, for one user.
@@ -244,7 +251,34 @@ export async function getWeeklyOverview(
   today: CalendarDate,
   timeZone: string,
 ): Promise<WeeklyOverview> {
-  return buildWeeklyOverview(await loadPlanningTasks(userId, weekStart, timeZone), weekStart, today);
+  return buildWeeklyOverview(
+    await loadPlanningTasks(userId, { from: weekStart, to: endOfWeek(weekStart) }, timeZone),
+    weekStart,
+    today,
+  );
+}
+
+// Every calendar date on which any of the user's tasks has a completion. The
+// join through the owner-filtered tasks keeps other users' completions out. At
+// most one row per active day, so it stays small.
+async function listCompletionDates(userId: number): Promise<CalendarDate[]> {
+  const rows = await getDb()
+    .selectDistinct({ completedOn: taskCompletions.completedOn })
+    .from(taskCompletions)
+    .innerJoin(tasks, eq(tasks.id, taskCompletions.taskId))
+    .where(eq(tasks.userId, userId));
+  return rows.map((row) => row.completedOn);
+}
+
+// Everything Progress shows, for one user: the current week and the one before
+// it, plus the completion history for the streak. Calculated on every call.
+export async function getProgress(userId: number, today: CalendarDate, timeZone: string): Promise<Progress> {
+  const weekStart = startOfWeek(today);
+  const [planningTasks, completionDates] = await Promise.all([
+    loadPlanningTasks(userId, { from: addDays(weekStart, -7), to: endOfWeek(weekStart) }, timeZone),
+    listCompletionDates(userId),
+  ]);
+  return buildProgress(planningTasks, completionDates, today);
 }
 
 export async function getTask(userId: number, taskId: number, today: CalendarDate): Promise<TaskRecord | null> {

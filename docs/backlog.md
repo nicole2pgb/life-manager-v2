@@ -62,12 +62,12 @@ Detailed requirements for larger features should be defined through OpenSpec bef
 
 ### 7. Progress
 
-- [ ] Weekly completion rate
-- [ ] Current streak
-- [ ] Weekly change
-- [ ] Daily completion chart
-- [ ] Weekly completion visualization
-- [ ] Progress by life area
+- [x] Weekly completion rate
+- [x] Current streak
+- [x] Weekly change
+- [x] Daily completion chart
+- [x] Weekly completion visualization
+- [x] Progress by life area
 
 ### 8. Settings
 
