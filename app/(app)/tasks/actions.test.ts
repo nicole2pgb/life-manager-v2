@@ -170,14 +170,14 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
     expect(task.schedule).toEqual({ kind: "none" });
   });
 
-  it("returns a completion to the dashboard when asked and revalidates both pages", async () => {
+  it("returns a completion to the dashboard when asked and revalidates the task pages", async () => {
     const { created } = await create({ recurrence: "daily" });
     vi.mocked(revalidatePath).mockClear();
     const to = await redirected(
       actions.setTaskCompletedAction(form({ taskId: String(created!.id), completed: "true", returnTo: "/dashboard" })),
     );
     expect(to).toBe("/dashboard");
-    expect(vi.mocked(revalidatePath).mock.calls.map(([path]) => path).sort()).toEqual(["/dashboard", "/tasks"]);
+    expect(vi.mocked(revalidatePath).mock.calls.map(([path]) => path).sort()).toEqual(["/dashboard", "/tasks", "/weekly-overview"]);
     expect(await completions(created!.id)).toEqual(["2026-10-06"]);
   });
 
@@ -200,16 +200,16 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
     expect(await completions(created!.id)).toEqual(["2026-10-06"]);
   });
 
-  it("revalidates the dashboard when tasks are created, edited and deleted", async () => {
+  it("revalidates the dashboard and weekly overview when tasks are created, edited and deleted", async () => {
     vi.mocked(revalidatePath).mockClear();
     const { created } = await create({ recurrence: "daily" });
     const paths = () => vi.mocked(revalidatePath).mock.calls.map(([path]) => path);
-    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard"]));
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview"]));
     vi.mocked(revalidatePath).mockClear();
     await redirected(actions.updateTaskAction(null, form({ ...common, taskId: String(created!.id), recurrence: "daily" })));
-    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard"]));
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview"]));
     vi.mocked(revalidatePath).mockClear();
     await redirected(actions.deleteTaskAction(form({ taskId: String(created!.id) })));
-    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard"]));
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard", "/weekly-overview"]));
   });
 });

@@ -2,7 +2,8 @@ import "server-only";
 
 import { and, asc, between, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { calendarDateOf, endOfWeek, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
-import { buildDashboard, type Dashboard } from "@/lib/tasks/dashboard";
+import { buildDashboard, type Dashboard, type DashboardTaskInput } from "@/lib/tasks/dashboard";
+import { buildWeeklyOverview, type WeeklyOverview } from "@/lib/tasks/weekly-overview";
 import type { LifeArea } from "./schema";
 import { cappedWeekCount, isRelevantOn, type RecurrenceRule } from "@/lib/tasks/recurrence";
 import type { TaskSchedule } from "@/lib/tasks/validation";
@@ -184,11 +185,13 @@ export async function listTasks(userId: number, today: CalendarDate): Promise<Ta
   return records.sort((a, b) => Number(a.completed) - Number(b.completed));
 }
 
-// Everything the Dashboard shows, for one user. Completions are loaded for the
-// calendar week of `today`, plus every completion of one-time tasks (their
-// single completion decides "completed today" and the dated week's progress
-// whatever its date). `timeZone` only converts creation instants to calendar dates.
-export async function getDashboard(userId: number, today: CalendarDate, timeZone: string): Promise<Dashboard> {
+// The user's tasks as plain planning data, newest created first. Completions
+// are loaded for the Monday-Sunday week starting at `weekStart`, plus every
+// completion of one-time tasks (their single completion decides "completed
+// today" and the dated week's progress whatever its date). `timeZone` only
+// converts creation instants to calendar dates. Shared by the Dashboard and the
+// Weekly Overview so both read the same data the same way.
+async function loadPlanningTasks(userId: number, weekStart: CalendarDate, timeZone: string): Promise<DashboardTaskInput[]> {
   const rows = await getDb()
     .select(taskSelection)
     .from(tasks)
@@ -198,7 +201,7 @@ export async function getDashboard(userId: number, today: CalendarDate, timeZone
   const completions = new Map<number, Set<CalendarDate>>();
   if (rows.length > 0) {
     const oneTimeIds = rows.filter((row) => (row.ruleType ?? "none") === "none").map((row) => row.id);
-    const inRange = between(taskCompletions.completedOn, startOfWeek(today), endOfWeek(today));
+    const inRange = between(taskCompletions.completedOn, weekStart, endOfWeek(weekStart));
     const found = await getDb()
       .select({ taskId: taskCompletions.taskId, completedOn: taskCompletions.completedOn })
       .from(taskCompletions)
@@ -217,19 +220,31 @@ export async function getDashboard(userId: number, today: CalendarDate, timeZone
       completions.set(row.taskId, set);
     }
   }
-  return buildDashboard(
-    rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      lifeArea: row.lifeArea,
-      rule: toRule({ type: row.ruleType, weekdays: row.ruleWeekdays, timesPerWeek: row.ruleTimesPerWeek }),
-      scheduledDate: row.scheduledDate,
-      dueDate: row.dueDate,
-      createdOn: calendarDateOf(row.createdAt, timeZone),
-      completionDates: completions.get(row.id) ?? new Set<CalendarDate>(),
-    })),
-    today,
-  );
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    lifeArea: row.lifeArea,
+    rule: toRule({ type: row.ruleType, weekdays: row.ruleWeekdays, timesPerWeek: row.ruleTimesPerWeek }),
+    scheduledDate: row.scheduledDate,
+    dueDate: row.dueDate,
+    createdOn: calendarDateOf(row.createdAt, timeZone),
+    completionDates: completions.get(row.id) ?? new Set<CalendarDate>(),
+  }));
+}
+
+// Everything the Dashboard shows, for one user.
+export async function getDashboard(userId: number, today: CalendarDate, timeZone: string): Promise<Dashboard> {
+  return buildDashboard(await loadPlanningTasks(userId, startOfWeek(today), timeZone), today);
+}
+
+// The Weekly Overview of the Monday-Sunday week starting at `weekStart`, for one user.
+export async function getWeeklyOverview(
+  userId: number,
+  weekStart: CalendarDate,
+  today: CalendarDate,
+  timeZone: string,
+): Promise<WeeklyOverview> {
+  return buildWeeklyOverview(await loadPlanningTasks(userId, weekStart, timeZone), weekStart, today);
 }
 
 export async function getTask(userId: number, taskId: number, today: CalendarDate): Promise<TaskRecord | null> {

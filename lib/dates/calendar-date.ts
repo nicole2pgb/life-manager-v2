@@ -66,6 +66,25 @@ export function formatLongCalendarDate(date: CalendarDate): string {
   });
 }
 
+// German long form of a week range, e.g. "28. September – 4. Oktober 2026". The
+// year is written once when both dates share it, otherwise after each date.
+// Built from the dates' UTC parts, so it cannot shift with the server's time zone.
+export function formatWeekRange(start: CalendarDate, end: CalendarDate): string {
+  const part = (date: CalendarDate) => {
+    const [year, month, day] = date.split("-").map(Number);
+    const monthName = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("de-DE", {
+      timeZone: "UTC",
+      month: "long",
+    });
+    return { year, text: `${day}. ${monthName}` };
+  };
+  const from = part(start);
+  const to = part(end);
+  return from.year === to.year
+    ? `${from.text} – ${to.text} ${to.year}`
+    : `${from.text} ${from.year} – ${to.text} ${to.year}`;
+}
+
 // Day arithmetic works on the parts of the calendar date through Date.UTC
 // only, never through local time, so it cannot shift with the server's time
 // zone or a daylight-saving change. Inputs must already be valid calendar dates.

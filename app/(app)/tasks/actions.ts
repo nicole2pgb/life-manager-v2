@@ -37,10 +37,11 @@ function readTaskInput(data: FormData): TaskInput {
   };
 }
 
-// Task data shows on both pages, so every change refreshes both.
+// Task data shows on all of these pages, so every change refreshes them all.
 function revalidateTaskPages() {
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
+  revalidatePath("/weekly-overview");
 }
 
 // Pages a completion may return to. Only these literals are ever redirected
