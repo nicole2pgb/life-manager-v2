@@ -47,10 +47,10 @@ Detailed requirements for larger features should be defined through OpenSpec bef
 
 ### 5. Dashboard / Today
 
-- [ ] Today's relevant tasks
-- [ ] Complete tasks from dashboard
-- [ ] Weekly progress summary
-- [ ] Appropriate empty states
+- [x] Today's relevant tasks
+- [x] Complete tasks from dashboard
+- [x] Weekly progress summary
+- [x] Appropriate empty states
 
 ### 6. Weekly Overview
 

@@ -54,6 +54,18 @@ export function formatCalendarDate(date: CalendarDate): string {
   return `${day}.${month}.${year}`;
 }
 
+// English long form for headings, e.g. "2026-10-02" -> "Friday 2 October". Built
+// from the date's UTC parts, so it cannot shift with the server's time zone.
+export function formatLongCalendarDate(date: CalendarDate): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", {
+    timeZone: "UTC",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
 // Day arithmetic works on the parts of the calendar date through Date.UTC
 // only, never through local time, so it cannot shift with the server's time
 // zone or a daylight-saving change. Inputs must already be valid calendar dates.

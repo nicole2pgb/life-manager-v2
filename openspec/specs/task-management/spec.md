@@ -330,7 +330,7 @@ The system SHALL let an authenticated user delete a task they own. The system MU
 - **THEN** all their other tasks and all other users' tasks are unchanged
 
 ### Requirement: Users can mark tasks completed and incomplete
-The system SHALL let an authenticated user mark a task they own as completed, and mark a completed task as incomplete again, directly from the task list. The new state MUST be persisted on the server, and MUST be shown after a reload. For a recurring task the control marks it done or not done for the current calendar date only, as defined by the recurring-tasks capability: the task itself is never completed, marking it done is accepted only while the task is relevant today, and un-completing removes only today's completion and is always accepted. The rest of this requirement describes one-time tasks. Completing a task SHALL be recorded as a completion for the current calendar date as determined by the application's calendar-date rules (see the requirement on calendar dates); marking it incomplete SHALL remove its completion. The completion date is independent of the task's scheduled date and due date: completing or uncompleting a task MUST NOT change either, and neither date affects whether or when the task can be completed (a task may be completed before, on or after its date). Completing a task preserves its scheduled date or due date. Completing an already completed task or uncompleting an incomplete task MUST leave the task unchanged and MUST NOT create duplicate completion records.
+The system SHALL let an authenticated user mark a task they own as completed, and mark a completed task as incomplete again, directly from the task list or from the dashboard. The new state MUST be persisted on the server, and MUST be shown after a reload. For a recurring task the control marks it done or not done for the current calendar date only, as defined by the recurring-tasks capability: the task itself is never completed, marking it done is accepted only while the task is relevant today, and un-completing removes only today's completion and is always accepted. The rest of this requirement describes one-time tasks. Completing a task SHALL be recorded as a completion for the current calendar date as determined by the application's calendar-date rules (see the requirement on calendar dates); marking it incomplete SHALL remove its completion. The completion date is independent of the task's scheduled date and due date: completing or uncompleting a task MUST NOT change either, and neither date affects whether or when the task can be completed (a task may be completed before, on or after its date). Completing a task preserves its scheduled date or due date. Completing an already completed task or uncompleting an incomplete task MUST leave the task unchanged and MUST NOT create duplicate completion records. After the operation the user SHALL return to the page it was started from (the task list or the dashboard), and both pages MUST show the new state; only those two pages are valid return targets, and any other requested target MUST fall back to the task list. Creating, editing and deleting a task likewise refresh both pages.
 
 #### Scenario: Complete a task
 - **WHEN** a user marks their incomplete task as completed
@@ -371,6 +371,22 @@ The system SHALL let an authenticated user mark a task they own as completed, an
 #### Scenario: One-time completion unchanged
 - **WHEN** a one-time task is completed
 - **THEN** it behaves exactly as before, with a single completion and its date preserved
+
+#### Scenario: Completed from the dashboard
+- **WHEN** a user completes a task from the dashboard
+- **THEN** they stay on the dashboard, and the task list shows the task completed when opened
+
+#### Scenario: Completed from the list stays on the list
+- **WHEN** a user completes a task from the task list
+- **THEN** they stay on the task list, and the dashboard shows the same state when opened
+
+#### Scenario: Unknown return target
+- **WHEN** a completion request names a return target other than the task list or the dashboard
+- **THEN** the completion is processed and the user is returned to the task list
+
+#### Scenario: Task changes refresh the dashboard
+- **WHEN** a task is created, edited or deleted
+- **THEN** the dashboard shows the change when it is opened next
 
 ### Requirement: Calendar dates follow one central definition of the user's day
 The system SHALL determine "today" and the calendar date of any instant through one central calendar-date definition, not through ad-hoc conversions at each use. A calendar date is a day (`YYYY-MM-DD`) without time of day or time zone. For the MVP all users SHALL be treated as living in one application-wide time zone, which is configurable by deployment and has a documented default; the definition MUST be structured so that a per-user time zone can be introduced later without changing stored dates or callers' expectations. The calendar date of an instant is the date shown on a wall clock in that time zone at that instant.

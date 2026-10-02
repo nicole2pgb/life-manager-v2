@@ -1,7 +1,8 @@
 import "server-only";
 
-import { and, asc, between, desc, eq, inArray, sql } from "drizzle-orm";
-import { endOfWeek, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
+import { and, asc, between, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { calendarDateOf, endOfWeek, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
+import { buildDashboard, type Dashboard } from "@/lib/tasks/dashboard";
 import type { LifeArea } from "./schema";
 import { cappedWeekCount, isRelevantOn, type RecurrenceRule } from "@/lib/tasks/recurrence";
 import type { TaskSchedule } from "@/lib/tasks/validation";
@@ -181,6 +182,54 @@ export async function listTasks(userId: number, today: CalendarDate): Promise<Ta
   const records = rows.map((row) => toRecord(row, weeks.get(row.id) ?? new Set(), today));
   // Stable sort: the query already ordered each group newest first.
   return records.sort((a, b) => Number(a.completed) - Number(b.completed));
+}
+
+// Everything the Dashboard shows, for one user. Completions are loaded for the
+// calendar week of `today`, plus every completion of one-time tasks (their
+// single completion decides "completed today" and the dated week's progress
+// whatever its date). `timeZone` only converts creation instants to calendar dates.
+export async function getDashboard(userId: number, today: CalendarDate, timeZone: string): Promise<Dashboard> {
+  const rows = await getDb()
+    .select(taskSelection)
+    .from(tasks)
+    .leftJoin(recurrenceRules, eq(recurrenceRules.taskId, tasks.id))
+    .where(eq(tasks.userId, userId))
+    .orderBy(desc(tasks.createdAt), desc(tasks.id));
+  const completions = new Map<number, Set<CalendarDate>>();
+  if (rows.length > 0) {
+    const oneTimeIds = rows.filter((row) => (row.ruleType ?? "none") === "none").map((row) => row.id);
+    const inRange = between(taskCompletions.completedOn, startOfWeek(today), endOfWeek(today));
+    const found = await getDb()
+      .select({ taskId: taskCompletions.taskId, completedOn: taskCompletions.completedOn })
+      .from(taskCompletions)
+      .where(
+        and(
+          inArray(
+            taskCompletions.taskId,
+            rows.map((row) => row.id),
+          ),
+          oneTimeIds.length > 0 ? or(inRange, inArray(taskCompletions.taskId, oneTimeIds)) : inRange,
+        ),
+      );
+    for (const row of found) {
+      const set = completions.get(row.taskId) ?? new Set<CalendarDate>();
+      set.add(row.completedOn);
+      completions.set(row.taskId, set);
+    }
+  }
+  return buildDashboard(
+    rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      lifeArea: row.lifeArea,
+      rule: toRule({ type: row.ruleType, weekdays: row.ruleWeekdays, timesPerWeek: row.ruleTimesPerWeek }),
+      scheduledDate: row.scheduledDate,
+      dueDate: row.dueDate,
+      createdOn: calendarDateOf(row.createdAt, timeZone),
+      completionDates: completions.get(row.id) ?? new Set<CalendarDate>(),
+    })),
+    today,
+  );
 }
 
 export async function getTask(userId: number, taskId: number, today: CalendarDate): Promise<TaskRecord | null> {

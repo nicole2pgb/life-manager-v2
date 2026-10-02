@@ -84,11 +84,28 @@ Rules:
 - Passing a task's date never hides, completes or deletes the task. An incomplete task stays an open task until the user completes or deletes it, and its original scheduled date or due date is kept, so later features can tell the original date from the current day.
 - In the MVP UI dates are shown in German format, for example 05.10.2026.
 
-Planned later behavior (documented here so later features stay consistent; not part of the Task Management change):
+### Today relevance of one-time tasks
 
-- Scheduled task: becomes relevant on its scheduled date. If it is not completed on that date, it remains an open task after that date until completed or deleted.
-- Due-date task: is open up to its deadline (eligible to appear every day up to and including the due date) and, if still incomplete afterward, remains open as overdue until completed or deleted.
-- Today, Weekly Overview, overdue presentation and Progress build on these semantics; how each presents them (including where undated tasks appear in the Weekly Overview) is defined in those changes.
+Defined in `lib/tasks/planning.ts` (`todayStatus`); the Dashboard / Today feature uses it.
+
+- Scheduled task: listed on its scheduled date and on every following day while it is incomplete (carried over). Not listed before its date. Carried-over tasks keep their original date and are not marked overdue.
+- Due-date task: listed every day, before and after the deadline, while it is incomplete. Only an incomplete task whose due date is before today is marked overdue.
+- Undated incomplete task: always listed.
+- A completed task is listed only on the day it was completed (shown as completed); on later days it is not listed.
+- Open tasks come before tasks completed today; overdue tasks come first among open tasks.
+
+### Weekly planned occurrences
+
+Defined in `lib/tasks/planning.ts` (`weekOccurrences`, `summarizeWeek`) for a Monday–Sunday week; the Dashboard weekly progress uses it, and Weekly Overview and Progress reuse it. The creation date is the calendar date of `created_at` in the application time zone.
+
+- Daily: one occurrence per day of the week on or after the creation date.
+- Specific weekdays: one occurrence per selected weekday on or after the creation date.
+- Times per week: the weekly target; in the creation week, `min(target, days from the creation date through Sunday)`; nothing in earlier weeks.
+- One-time task with a scheduled or due date: exactly one occurrence in the week containing that date, even if the date is before the creation date. A due-date task counts once, not per day. It adds nothing to other weeks.
+- Undated one-time task: no planned occurrences.
+- Completed occurrences: daily/weekday completions count only on planned days under the task's current rule; times-per-week completions on or after the creation date are capped at the week's effective target; a completed dated one-time task counts in its dated week regardless of the completion date. Completed never exceeds planned.
+- Numbers always use the task's current definition, so editing a task recomputes the week. Carried-over, overdue and undated tasks appear in Today but add no planned occurrences to the current week.
+- The weekly percentage is rounded to a whole number and is not defined (no value) when nothing is planned.
 
 Recurring tasks never have a scheduled date or due date; see Recurrence Rule.
 
@@ -133,7 +150,7 @@ Gym → 3 times per week
 - A task may change between recurring types at any time; existing completions are kept and the new rule governs relevance from then on.
 - An incomplete one-time task may become recurring (its date is cleared); a completed one-time task may not until it is marked incomplete.
 - A recurring task may become one-time only if it has no completion history at all; otherwise the change is rejected. History is never deleted or migrated by an edit.
-- Whether relevance applies to dates before a task's creation is decided by the Weekly Overview change.
+- Relevance (`isRelevantOn`) does not depend on the creation date. The creation date only limits planned occurrences of a week; see "Weekly planned occurrences".
 
 ---
 

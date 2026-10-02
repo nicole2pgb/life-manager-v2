@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Server Action tests against a real database; they only run with
@@ -167,5 +168,48 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
     const task = (await tasks.getTask(userA, created!.id, clock.today))!;
     expect(task.rule).toEqual({ type: "daily" });
     expect(task.schedule).toEqual({ kind: "none" });
+  });
+
+  it("returns a completion to the dashboard when asked and revalidates both pages", async () => {
+    const { created } = await create({ recurrence: "daily" });
+    vi.mocked(revalidatePath).mockClear();
+    const to = await redirected(
+      actions.setTaskCompletedAction(form({ taskId: String(created!.id), completed: "true", returnTo: "/dashboard" })),
+    );
+    expect(to).toBe("/dashboard");
+    expect(vi.mocked(revalidatePath).mock.calls.map(([path]) => path).sort()).toEqual(["/dashboard", "/tasks"]);
+    expect(await completions(created!.id)).toEqual(["2026-10-06"]);
+  });
+
+  it("returns a rejected dashboard completion to the dashboard with the notice", async () => {
+    const { created } = await create({ recurrence: "weekdays", weekdays: ["1", "4"] });
+    const to = await redirected(
+      actions.setTaskCompletedAction(form({ taskId: String(created!.id), completed: "true", returnTo: "/dashboard" })),
+    );
+    expect(to).toBe("/dashboard?notice=not-relevant");
+    expect(await completions(created!.id)).toEqual([]);
+  });
+
+  it("falls back to the task list for any other return target", async () => {
+    const { created } = await create({ recurrence: "daily" });
+    for (const returnTo of ["https://evil.example", "//evil.example", "/profile", "/dashboard/../x", ""]) {
+      expect(
+        await redirected(actions.setTaskCompletedAction(form({ taskId: String(created!.id), completed: "true", returnTo }))),
+      ).toBe("/tasks");
+    }
+    expect(await completions(created!.id)).toEqual(["2026-10-06"]);
+  });
+
+  it("revalidates the dashboard when tasks are created, edited and deleted", async () => {
+    vi.mocked(revalidatePath).mockClear();
+    const { created } = await create({ recurrence: "daily" });
+    const paths = () => vi.mocked(revalidatePath).mock.calls.map(([path]) => path);
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard"]));
+    vi.mocked(revalidatePath).mockClear();
+    await redirected(actions.updateTaskAction(null, form({ ...common, taskId: String(created!.id), recurrence: "daily" })));
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard"]));
+    vi.mocked(revalidatePath).mockClear();
+    await redirected(actions.deleteTaskAction(form({ taskId: String(created!.id) })));
+    expect(paths()).toEqual(expect.arrayContaining(["/tasks", "/dashboard"]));
   });
 });

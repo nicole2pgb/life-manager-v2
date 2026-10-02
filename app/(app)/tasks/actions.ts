@@ -37,6 +37,19 @@ function readTaskInput(data: FormData): TaskInput {
   };
 }
 
+// Task data shows on both pages, so every change refreshes both.
+function revalidateTaskPages() {
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+}
+
+// Pages a completion may return to. Only these literals are ever redirected
+// to; request input is matched against them, never echoed into the redirect.
+const RETURN_TARGETS = ["/tasks", "/dashboard"] as const;
+function returnTarget(value: FormDataEntryValue | null): (typeof RETURN_TARGETS)[number] {
+  return RETURN_TARGETS.find((target) => target === value) ?? "/tasks";
+}
+
 const SAVE_FAILED = "Could not save the task. Please try again.";
 
 export async function createTaskAction(_prev: TaskFormState, data: FormData): Promise<TaskFormState> {
@@ -50,7 +63,7 @@ export async function createTaskAction(_prev: TaskFormState, data: FormData): Pr
     console.error("createTask failed", error);
     return { errors: { form: SAVE_FAILED } };
   }
-  revalidatePath("/tasks");
+  revalidateTaskPages();
   redirect("/tasks");
 }
 
@@ -88,7 +101,7 @@ export async function updateTaskAction(_prev: TaskFormState, data: FormData): Pr
       },
     };
   }
-  revalidatePath("/tasks");
+  revalidateTaskPages();
   redirect("/tasks");
 }
 
@@ -96,7 +109,7 @@ export async function deleteTaskAction(data: FormData): Promise<void> {
   const userId = await requireUserId();
   const taskId = parseTaskId(data.get("taskId"));
   if (taskId !== null) await deleteTask(userId, taskId);
-  revalidatePath("/tasks");
+  revalidateTaskPages();
   redirect("/tasks");
 }
 
@@ -109,8 +122,8 @@ export async function setTaskCompletedAction(data: FormData): Promise<void> {
     // Only the current calendar date is ever used; a date in the request is ignored.
     const today = await getTodayFor(userId);
     const outcome = await setTaskCompleted(userId, taskId, desired === "true", today);
-    if (outcome === "not_relevant") redirect(`/tasks?notice=${NOT_RELEVANT_NOTICE}`);
+    if (outcome === "not_relevant") redirect(`${returnTarget(data.get("returnTo"))}?notice=${NOT_RELEVANT_NOTICE}`);
   }
-  revalidatePath("/tasks");
-  redirect("/tasks");
+  revalidateTaskPages();
+  redirect(returnTarget(data.get("returnTo")));
 }
