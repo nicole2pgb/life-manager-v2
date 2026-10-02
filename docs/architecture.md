@@ -53,7 +53,7 @@ Scheduled dates, due dates and completion dates are calendar dates (`YYYY-MM-DD`
 - Scheduled and due dates are plain stored dates and need no time zone to be saved; the time zone matters when they are compared with "today" (Today, Weekly Overview, overdue state, Progress) and when a completion date is recorded.
 - Weekday and week arithmetic (`isoWeekday`, `addDays`, `startOfWeek`, `endOfWeek`) lives in the same module and works on the calendar date only (UTC parts, no local time), so it never shifts with the server time zone or daylight-saving changes. Weekdays are ISO numbers (Monday = 1 … Sunday = 7).
 - Weeks run Monday–Sunday in the MVP. The week-start argument defaults to Monday; a later user setting only changes the argument callers pass.
-- Dashboard, Weekly Overview and Progress reuse this module.
+- Dashboard, Weekly Overview and Progress reuse this module. Today membership and weekly planned/completed occurrences are defined once, in `lib/tasks/planning.ts` (pure, no database or clock), and those features reuse it as well.
 
 ## Recurrence
 

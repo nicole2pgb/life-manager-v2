@@ -7,11 +7,11 @@ Lets people create an account, sign in and out with server-side sessions, keeps 
 ## Requirements
 
 ### Requirement: Users can register with name, email and password
-The system SHALL let a visitor create an account at `/register` by submitting name, email, password and password confirmation. All validation MUST be performed on the server. The name MUST be non-empty after trimming and at most 255 characters. The email MUST be a syntactically valid address of at most 255 characters and is stored trimmed and lower-cased. The password MUST be 8 to 72 bytes long, measured as its UTF-8 encoding (not as a character count), because bcrypt ignores input beyond 72 bytes; it MUST equal the confirmation. On success the system SHALL create the user, sign them in, and redirect to `/profile`.
+The system SHALL let a visitor create an account at `/register` by submitting name, email, password and password confirmation. All validation MUST be performed on the server. The name MUST be non-empty after trimming and at most 255 characters. The email MUST be a syntactically valid address of at most 255 characters and is stored trimmed and lower-cased. The password MUST be 8 to 72 bytes long, measured as its UTF-8 encoding (not as a character count), because bcrypt ignores input beyond 72 bytes; it MUST equal the confirmation. On success the system SHALL create the user, sign them in, and redirect to `/dashboard`.
 
 #### Scenario: Successful registration
 - **WHEN** a visitor submits a valid name, an unused email, a valid password and a matching confirmation
-- **THEN** a user row is created, a session is started, and the visitor lands on `/profile`
+- **THEN** a user row is created, a session is started, and the visitor lands on `/dashboard`
 
 #### Scenario: Passwords do not match
 - **WHEN** the password and the confirmation differ
@@ -49,11 +49,11 @@ The system SHALL store only a bcrypt hash of each password (via `bcryptjs`, cost
 - **THEN** their stored hashes differ
 
 ### Requirement: Users can log in with email and password
-The system SHALL let a visitor sign in at `/login` with email and password. The email match MUST be case-insensitive. On success the system SHALL start a session and redirect to `/profile`. On any failure the system MUST show one generic message ("Invalid email or password") that does not reveal whether the email is registered, and the work performed MUST NOT differ detectably between an unknown email and a wrong password.
+The system SHALL let a visitor sign in at `/login` with email and password. The email match MUST be case-insensitive. On success the system SHALL start a session and redirect to `/dashboard`. On any failure the system MUST show one generic message ("Invalid email or password") that does not reveal whether the email is registered, and the work performed MUST NOT differ detectably between an unknown email and a wrong password.
 
 #### Scenario: Successful login
 - **WHEN** a registered user submits their email (in any letter case) and correct password
-- **THEN** a session is started and they land on `/profile`
+- **THEN** a session is started and they land on `/dashboard`
 
 #### Scenario: Wrong password
 - **WHEN** a registered email is submitted with a wrong password
@@ -106,15 +106,15 @@ The system SHALL provide a logout control that deletes the current session row, 
 - **THEN** the other browser's session remains valid
 
 ### Requirement: Application routes are protected
-The system SHALL treat every route except `/login` and `/register` (and framework static assets) as protected. A request without a valid session MUST be redirected to `/login`. A request to `/login` or `/register` with a valid session MUST be redirected to `/profile`. The route proxy MAY perform an optimistic cookie-presence check, but every protected page and every Server Action MUST additionally verify the session against the database before returning or changing data.
+The system SHALL treat every route except `/login` and `/register` (and framework static assets) as protected, including `/dashboard`, `/tasks` and `/profile`. A request without a valid session MUST be redirected to `/login`. A request to `/login` or `/register` with a valid session MUST be redirected to `/dashboard`. The route proxy MAY perform an optimistic cookie-presence check, but every protected page and every Server Action MUST additionally verify the session against the database before returning or changing data.
 
 #### Scenario: Unauthenticated access to a protected page
-- **WHEN** a visitor without a session requests `/profile`
-- **THEN** they are redirected to `/login` and no profile data is rendered
+- **WHEN** a visitor without a session requests `/profile` or `/dashboard`
+- **THEN** they are redirected to `/login` and no profile or task data is rendered
 
 #### Scenario: Authenticated user opens the login page
 - **WHEN** a signed-in user requests `/login` or `/register`
-- **THEN** they are redirected to `/profile`
+- **THEN** they are redirected to `/dashboard`
 
 #### Scenario: Cookie present but session invalid
 - **WHEN** a request carries a session cookie that the database does not accept and requests `/profile`
@@ -122,7 +122,7 @@ The system SHALL treat every route except `/login` and `/register` (and framewor
 
 #### Scenario: Root path
 - **WHEN** a visitor requests `/`
-- **THEN** a signed-in user is redirected to `/profile` and everyone else to `/login`
+- **THEN** a signed-in user is redirected to `/dashboard` and everyone else to `/login`
 
 ### Requirement: Profile page shows the authenticated user's details
 The system SHALL provide `/profile` showing the signed-in user's name and email, an initials avatar, and a logout control. It MUST show only the details of the user identified by the session and MUST NOT expose the password hash or session data.

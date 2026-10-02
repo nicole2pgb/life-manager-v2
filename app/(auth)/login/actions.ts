@@ -30,5 +30,5 @@ export async function loginAction(_prev: AuthFormState, data: FormData): Promise
   if (!user || !valid) return { errors: { form: "Invalid email or password." }, values };
 
   await createSession(user.id);
-  redirect("/profile");
+  redirect("/dashboard");
 }

@@ -9,6 +9,7 @@ import {
   isoWeekday,
   startOfWeek,
   formatCalendarDate,
+  formatLongCalendarDate,
   parseCalendarDate,
   todayFor,
 } from "./calendar-date";
@@ -185,5 +186,12 @@ describe("startOfWeek / endOfWeek", () => {
       if (original === undefined) delete process.env.TZ;
       else process.env.TZ = original;
     }
+  });
+});
+
+describe("formatLongCalendarDate", () => {
+  it("names the weekday, day and month", () => {
+    expect(formatLongCalendarDate("2026-10-02")).toBe("Friday 2 October");
+    expect(formatLongCalendarDate("2026-12-31")).toBe("Thursday 31 December");
   });
 });

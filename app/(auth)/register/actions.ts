@@ -32,5 +32,5 @@ export async function registerAction(_prev: AuthFormState, data: FormData): Prom
   if (!result.ok) return { errors: { email: "This email is already in use." }, values };
 
   await createSession(result.id);
-  redirect("/profile");
+  redirect("/dashboard");
 }
