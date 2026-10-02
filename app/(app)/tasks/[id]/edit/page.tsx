@@ -4,6 +4,7 @@ import { TaskForm } from "@/components/tasks/task-form";
 import { dateLabel } from "@/components/tasks/task-card";
 import { getTask } from "@/db/tasks";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getTodayFor } from "@/lib/dates/time-zone";
 import { parseTaskId } from "@/lib/tasks/validation";
 import { updateTaskAction } from "../../actions";
 
@@ -16,7 +17,7 @@ export default async function EditTaskPage({ params }: { params: Promise<{ id: s
   // A malformed id, a missing task and another user's task all look the same.
   const taskId = parseTaskId((await params).id);
   if (taskId === null) notFound();
-  const task = await getTask(user.id, taskId);
+  const task = await getTask(user.id, taskId, await getTodayFor(user.id));
   if (!task) notFound();
 
   const { schedule } = task;
@@ -31,13 +32,17 @@ export default async function EditTaskPage({ params }: { params: Promise<{ id: s
             lifeAreas={LIFE_AREAS}
             submitLabel="Save changes"
             taskId={task.id}
-            dateLocked={task.completed ? { label: dateLabel(schedule) } : undefined}
+            dateLocked={task.rule.type === "none" && task.completed ? { label: dateLabel(schedule) } : undefined}
+            historyLocked={task.rule.type !== "none" && task.hasCompletionHistory}
             initial={{
               title: task.title,
               notes: task.notes ?? "",
               lifeArea: task.lifeArea,
               dateKind: schedule.kind,
               date: schedule.kind === "none" ? "" : schedule.date,
+              recurrence: task.rule.type,
+              weekdays: task.rule.type === "weekdays" ? task.rule.weekdays.map(String) : [],
+              timesPerWeek: task.rule.type === "times_per_week" ? String(task.rule.timesPerWeek) : "",
             }}
           />
         </div>

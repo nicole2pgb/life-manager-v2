@@ -53,3 +53,42 @@ export function formatCalendarDate(date: CalendarDate): string {
   const [year, month, day] = date.split("-");
   return `${day}.${month}.${year}`;
 }
+
+// Day arithmetic works on the parts of the calendar date through Date.UTC
+// only, never through local time, so it cannot shift with the server's time
+// zone or a daylight-saving change. Inputs must already be valid calendar dates.
+
+function toUtcMs(date: CalendarDate): number {
+  const [year, month, day] = date.split("-").map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+function fromUtcMs(ms: number): CalendarDate {
+  const d = new Date(ms);
+  const pad = (n: number, width: number) => String(n).padStart(width, "0");
+  return `${pad(d.getUTCFullYear(), 4)}-${pad(d.getUTCMonth() + 1, 2)}-${pad(d.getUTCDate(), 2)}`;
+}
+
+// ISO weekday: Monday = 1 ... Sunday = 7 (the numbers stored in recurrence rules).
+export function isoWeekday(date: CalendarDate): number {
+  const day = new Date(toUtcMs(date)).getUTCDay(); // 0 = Sunday
+  return day === 0 ? 7 : day;
+}
+
+export function addDays(date: CalendarDate, days: number): CalendarDate {
+  return fromUtcMs(toUtcMs(date) + days * 86_400_000);
+}
+
+export type WeekStartDay = "Monday" | "Sunday";
+
+// The MVP uses Monday-Sunday weeks everywhere; the parameter exists so a later
+// user setting (user_settings.week_start) only changes the callers' argument.
+export function startOfWeek(date: CalendarDate, weekStart: WeekStartDay = "Monday"): CalendarDate {
+  const weekday = isoWeekday(date);
+  const offset = weekStart === "Monday" ? weekday - 1 : weekday % 7;
+  return addDays(date, -offset);
+}
+
+export function endOfWeek(date: CalendarDate, weekStart: WeekStartDay = "Monday"): CalendarDate {
+  return addDays(startOfWeek(date, weekStart), 6);
+}

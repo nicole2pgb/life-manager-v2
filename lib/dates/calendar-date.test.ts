@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import {
+  addDays,
   calendarDateOf,
+  endOfWeek,
+  isoWeekday,
+  startOfWeek,
   formatCalendarDate,
   parseCalendarDate,
   todayFor,
@@ -114,5 +118,72 @@ describe("time zone resolver", () => {
   it("fails with an error naming the variable when invalid", () => {
     vi.stubEnv("APP_TIME_ZONE", "Not/AZone");
     expect(() => getApplicationTimeZone()).toThrow(/APP_TIME_ZONE/);
+  });
+});
+
+describe("isoWeekday", () => {
+  it("numbers Monday 1 to Sunday 7", () => {
+    expect(isoWeekday("2026-10-05")).toBe(1);
+    expect(isoWeekday("2026-10-06")).toBe(2);
+    expect(isoWeekday("2026-10-11")).toBe(7);
+  });
+  it("handles leap day, year boundary and the DATE limits", () => {
+    expect(isoWeekday("2028-02-29")).toBe(2);
+    expect(isoWeekday("2026-12-31")).toBe(4);
+    expect(isoWeekday("2027-01-01")).toBe(5);
+    expect(isoWeekday("9999-12-31")).toBe(5);
+    expect(isoWeekday("1000-01-01")).toBe(3);
+  });
+});
+
+describe("addDays", () => {
+  it("rolls over months, years and leap days", () => {
+    expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2028-02-28", 1)).toBe("2028-02-29");
+    expect(addDays("2027-02-28", 1)).toBe("2027-03-01");
+    expect(addDays("2026-01-01", -1)).toBe("2025-12-31");
+  });
+  it("counts whole calendar days across daylight-saving changes", () => {
+    expect(addDays("2026-03-28", 1)).toBe("2026-03-29");
+    expect(addDays("2026-03-29", 1)).toBe("2026-03-30");
+    expect(addDays("2026-10-24", 1)).toBe("2026-10-25");
+    expect(addDays("2026-10-25", 1)).toBe("2026-10-26");
+  });
+});
+
+describe("startOfWeek / endOfWeek", () => {
+  it("runs Monday to Sunday by default", () => {
+    expect(startOfWeek("2026-10-05")).toBe("2026-10-05");
+    expect(startOfWeek("2026-10-11")).toBe("2026-10-05");
+    expect(endOfWeek("2026-10-07")).toBe("2026-10-11");
+    expect(startOfWeek("2026-10-12")).toBe("2026-10-12");
+  });
+  it("can start on Sunday", () => {
+    expect(startOfWeek("2026-10-11", "Sunday")).toBe("2026-10-11");
+    expect(startOfWeek("2026-10-10", "Sunday")).toBe("2026-10-04");
+    expect(endOfWeek("2026-10-10", "Sunday")).toBe("2026-10-10");
+  });
+  it("crosses month and year boundaries", () => {
+    expect(startOfWeek("2027-01-01")).toBe("2026-12-28");
+    expect(endOfWeek("2027-01-01")).toBe("2027-01-03");
+  });
+  it("is stable across daylight-saving weeks", () => {
+    expect(startOfWeek("2026-03-29")).toBe("2026-03-23");
+    expect(endOfWeek("2026-10-25")).toBe("2026-10-25");
+  });
+  it("does not depend on the process time zone", () => {
+    const original = process.env.TZ;
+    try {
+      for (const tz of ["UTC", "Pacific/Kiritimati", "Pacific/Pago_Pago"]) {
+        process.env.TZ = tz;
+        expect(isoWeekday("2026-10-05")).toBe(1);
+        expect(addDays("2026-10-25", 1)).toBe("2026-10-26");
+        expect(startOfWeek("2026-10-11")).toBe("2026-10-05");
+      }
+    } finally {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    }
   });
 });
