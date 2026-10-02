@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { addDays, endOfWeek, isoWeekday, type CalendarDate } from "@/lib/dates/calendar-date";
 import {
+  dayOccurrence,
   summarizeWeek,
   todayRank,
   todayStatus,
@@ -210,5 +212,92 @@ describe("completed <= planned", () => {
       }
     }
     expect(checked).toBeGreaterThan(10000);
+  });
+});
+
+describe("dayOccurrence", () => {
+  it("places daily tasks on every day from the creation date", () => {
+    const t = task(daily, { createdOn: WED, done: [THU] });
+    expect(dayOccurrence(t, TUE)).toBeNull();
+    expect(dayOccurrence(t, WED)).toEqual({ kind: "recurring", done: false });
+    expect(dayOccurrence(t, THU)).toEqual({ kind: "recurring", done: true });
+  });
+  it("places weekday tasks only on their weekdays from the creation date", () => {
+    expect(dayOccurrence(task(monThu), MON)).toEqual({ kind: "recurring", done: false });
+    expect(dayOccurrence(task(monThu), TUE)).toBeNull();
+    expect(dayOccurrence(task(monThu, { createdOn: TUE }), MON)).toBeNull();
+    expect(dayOccurrence(task(monThu, { createdOn: TUE }), THU)).not.toBeNull();
+  });
+  it("ignores completions on unplanned days", () => {
+    expect(dayOccurrence(task(monThu, { done: [TUE] }), TUE)).toBeNull();
+  });
+  it("places a dated one-time task only on its own date, even before its creation date", () => {
+    const scheduled = task(none, { scheduledDate: TUE, createdOn: FRI });
+    expect(dayOccurrence(scheduled, MON)).toBeNull();
+    expect(dayOccurrence(scheduled, TUE)).toEqual({ kind: "scheduled", done: false });
+    expect(dayOccurrence(task(none, { dueDate: WED }), WED)).toEqual({ kind: "due", done: false });
+  });
+  it("marks a dated one-time task done whatever its completion date", () => {
+    expect(dayOccurrence(task(none, { scheduledDate: TUE, done: [THU] }), TUE)).toEqual({ kind: "scheduled", done: true });
+    expect(dayOccurrence(task(none, { scheduledDate: TUE, done: [THU] }), THU)).toBeNull();
+  });
+  it("never places times-per-week or undated one-time tasks", () => {
+    for (const d of [MON, WED, SUN]) {
+      expect(dayOccurrence(task(perWeek(3), { done: [d] }), d)).toBeNull();
+      expect(dayOccurrence(task(none, { done: [d] }), d)).toBeNull();
+    }
+  });
+});
+
+// The week logic before day placement was shared, kept as a reference to prove
+// that weekOccurrences did not change.
+function legacyWeekOccurrences(t: PlanningTask, weekStart: CalendarDate) {
+  const { rule, createdOn, completionDates } = t;
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const daysFromCreation = days.filter((d) => d >= createdOn);
+  const count = (planned: CalendarDate[]) => ({
+    planned: planned.length,
+    completed: planned.filter((d) => completionDates.has(d)).length,
+  });
+  switch (rule.type) {
+    case "none": {
+      const date = t.scheduledDate ?? t.dueDate;
+      if (date === null || date < weekStart || date > endOfWeek(weekStart)) return { planned: 0, completed: 0 };
+      return { planned: 1, completed: completionDates.size > 0 ? 1 : 0 };
+    }
+    case "daily":
+      return count(daysFromCreation);
+    case "weekdays":
+      return count(daysFromCreation.filter((d) => rule.weekdays.includes(isoWeekday(d))));
+    case "times_per_week": {
+      const planned = createdOn < weekStart ? rule.timesPerWeek : Math.min(rule.timesPerWeek, daysFromCreation.length);
+      const done = days.filter((d) => d >= createdOn && completionDates.has(d)).length;
+      return { planned, completed: Math.min(done, planned) };
+    }
+  }
+}
+
+describe("weekOccurrences equals the pre-refactor definition", () => {
+  const weeks = ["2026-09-21", MON, "2026-10-12"];
+  const createdOns = [OLD, MON, WED, SUN, "2026-10-13"];
+  const rules = [none, daily, monThu, { type: "weekdays", weekdays: [7] } as RecurrenceRule, perWeek(1), perWeek(3), perWeek(7)];
+  const dates = [null, "2026-09-23", MON, WED, SUN, "2026-10-12"];
+  const doneSets = [[], [MON], [TUE, THU], [MON, TUE, WED, THU, FRI, SAT, SUN], ["2026-09-22", "2026-10-13"]];
+
+  it("matches for every combination of rule, dates, creation date and completions", () => {
+    let checked = 0;
+    for (const weekStart of weeks)
+      for (const rule of rules)
+        for (const createdOn of createdOns)
+          for (const done of doneSets)
+            for (const date of dates)
+              for (const kind of ["scheduledDate", "dueDate"] as const) {
+                // Only one-time tasks carry a date.
+                if (rule.type !== "none" && date !== null) continue;
+                const t = task(rule, { createdOn, done, [kind]: date });
+                expect(weekOccurrences(t, weekStart)).toEqual(legacyWeekOccurrences(t, weekStart));
+                checked += 1;
+              }
+    expect(checked).toBeGreaterThan(1000);
   });
 });

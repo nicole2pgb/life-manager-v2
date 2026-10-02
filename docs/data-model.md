@@ -240,14 +240,13 @@ Progress is calculated from tasks, recurrence rules and task completions.
 
 It is not a separate primary data entity in the MVP.
 
-Calculated values include:
+Calculated values for the Progress screen (`lib/tasks/progress.ts`), always for the current Monday–Sunday week; nothing is stored:
 
-- Weekly completion rate
-- Current streak
-- Weekly change compared with the previous week
-- Daily completion for the current week
-- Weekly completion visualization
-- Completion progress by life area
+- **Weekly completion rate and weekly completion visualization:** the week's completed and planned occurrences from `summarizeWeek`, the same numbers as the Dashboard. No percentage when nothing is planned.
+- **Current streak:** consecutive calendar days with at least one completion of any of the user's tasks (any completion row, whether or not the weekly numbers count it). It ends today if today has a completion; otherwise it continues from yesterday, so an unfinished today never breaks it. A fully elapsed day without a completion breaks it. It can span weeks. Deleting a task deletes its completions and can shorten the streak.
+- **Weekly change:** current week's completion rate minus the previous week's, in percentage points. It is calculated from the unrounded ratios and only the difference is rounded (`Math.round`); shown as `−8% pts`, `+8% pts` or `0% pts`. "No comparison" when either week has no planned occurrences. The previous week uses current task definitions, like all planned-occurrence numbers.
+- **Daily completion:** completed versus planned per day, from `dayOccurrence`. Only day-bound occurrences are placed (daily, specific weekdays, dated one-time tasks on their date); times-per-week tasks are on no day. Future planned days show as incomplete; a day with nothing planned shows a "no planned" state, not 0%. Daily totals can therefore be lower than the weekly totals.
+- **Completion by life area:** `summarizeWeek` per life area, for all six areas (times-per-week tasks included, so the areas add up to the weekly totals). An area with nothing planned shows "Nothing planned", not 0%.
 
 ---
 

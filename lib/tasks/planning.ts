@@ -61,6 +61,36 @@ export function todayRank(status: Pick<TodayStatus, "done" | "overdue">): number
   return status.overdue ? 0 : 1;
 }
 
+// ---------- Day placement ----------
+
+export type DayOccurrence = {
+  kind: "recurring" | "scheduled" | "due";
+  done: boolean;
+};
+
+// The occurrence a task has on one calendar date, or null when it has none.
+// The single definition of day placement: weekOccurrences, Weekly Overview
+// and Progress all use it. Times-per-week tasks have no fixed day and undated
+// one-time tasks plan nothing, so both are never placed on a day.
+export function dayOccurrence(task: PlanningTask, date: CalendarDate): DayOccurrence | null {
+  const { rule, createdOn, completionDates } = task;
+  switch (rule.type) {
+    case "daily":
+      return date >= createdOn ? { kind: "recurring", done: completionDates.has(date) } : null;
+    case "weekdays":
+      return date >= createdOn && rule.weekdays.includes(isoWeekday(date))
+        ? { kind: "recurring", done: completionDates.has(date) }
+        : null;
+    case "none": {
+      // The task's own date decides the day, whatever its completion date.
+      if (date !== (task.scheduledDate ?? task.dueDate)) return null;
+      return { kind: task.scheduledDate !== null ? "scheduled" : "due", done: completionDates.size > 0 };
+    }
+    case "times_per_week":
+      return null;
+  }
+}
+
 // ---------- Weekly planned occurrences ----------
 
 export type WeekOccurrences = { planned: number; completed: number };
@@ -70,34 +100,25 @@ export type WeekOccurrences = { planned: number; completed: number };
 export function weekOccurrences(task: PlanningTask, weekStart: CalendarDate): WeekOccurrences {
   const { rule, createdOn, completionDates } = task;
   const days = weekDates(weekStart);
-  // Day-based recurring occurrences never exist before the creation date.
-  const daysFromCreation = days.filter((d) => d >= createdOn);
 
-  switch (rule.type) {
-    case "none": {
-      const date = task.scheduledDate ?? task.dueDate;
-      if (date === null || !inWeek(date, weekStart)) return { planned: 0, completed: 0 };
-      return { planned: 1, completed: completionDates.size > 0 ? 1 : 0 };
+  if (rule.type !== "times_per_week") {
+    let planned = 0;
+    let completed = 0;
+    for (const day of days) {
+      const occurrence = dayOccurrence(task, day);
+      if (occurrence === null) continue;
+      planned += 1;
+      if (occurrence.done) completed += 1;
     }
-    case "daily":
-      return countDays(daysFromCreation, completionDates);
-    case "weekdays":
-      return countDays(
-        daysFromCreation.filter((d) => rule.weekdays.includes(isoWeekday(d))),
-        completionDates,
-      );
-    case "times_per_week": {
-      // Full target in any week after the creation week; in the creation week at
-      // most one occurrence per remaining day, so the first week is reachable.
-      const planned = createdOn < weekStart ? rule.timesPerWeek : Math.min(rule.timesPerWeek, daysFromCreation.length);
-      const done = days.filter((d) => d >= createdOn && completionDates.has(d)).length;
-      return { planned, completed: Math.min(done, planned) };
-    }
+    return { planned, completed };
   }
-}
 
-function countDays(planned: CalendarDate[], completionDates: ReadonlySet<CalendarDate>): WeekOccurrences {
-  return { planned: planned.length, completed: planned.filter((d) => completionDates.has(d)).length };
+  // Full target in any week after the creation week; in the creation week at
+  // most one occurrence per remaining day, so the first week is reachable.
+  const daysFromCreation = days.filter((d) => d >= createdOn);
+  const planned = createdOn < weekStart ? rule.timesPerWeek : Math.min(rule.timesPerWeek, daysFromCreation.length);
+  const done = daysFromCreation.filter((d) => completionDates.has(d)).length;
+  return { planned, completed: Math.min(done, planned) };
 }
 
 export type WeekSummary = {

@@ -42,6 +42,7 @@ function revalidateTaskPages() {
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
   revalidatePath("/weekly-overview");
+  revalidatePath("/progress");
 }
 
 // Pages a completion may return to. Only these literals are ever redirected
