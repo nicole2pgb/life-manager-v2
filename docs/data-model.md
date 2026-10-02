@@ -107,6 +107,15 @@ Defined in `lib/tasks/planning.ts` (`weekOccurrences`, `summarizeWeek`) for a Mo
 - Numbers always use the task's current definition, so editing a task recomputes the week. Carried-over, overdue and undated tasks appear in Today but add no planned occurrences to the current week.
 - The weekly percentage is rounded to a whole number and is not defined (no value) when nothing is planned.
 
+### Weekly Overview placement
+
+The Weekly Overview (`lib/tasks/weekly-overview.ts`) is read-only and shows one Monday–Sunday week. It follows the planned-occurrence rules above, so its entries add up to the Dashboard's weekly numbers:
+
+- Daily and specific-weekday tasks appear on their planned days, never before the creation date.
+- A dated one-time task appears only on its scheduled or due date, shown as done when it is completed (whatever the completion date). Incomplete dated tasks stay on their date: no carry-forward, no overdue or missed state.
+- Times-per-week tasks appear only in the Weekly frequency section ("x of N" for the viewed week, with the reduced target in the creation week).
+- Incomplete undated one-time tasks are listed under Open tasks, independent of the week; they plan no occurrences.
+
 Recurring tasks never have a scheduled date or due date; see Recurrence Rule.
 
 ---
@@ -145,7 +154,7 @@ Gym → 3 times per week
 
 ### Rules
 
-- Relevance is defined once, in `lib/tasks/recurrence.ts` (`isRelevantOn`); Today and Weekly Overview reuse it. The general task management list is not filtered by relevance.
+- Relevance is defined once, in `lib/tasks/recurrence.ts` (`isRelevantOn`); Today reuses it. The general task management list is not filtered by relevance. Weekly Overview does not use `isRelevantOn`: it places tasks per day by the planned-occurrence rules (see "Weekly Overview placement").
 - A recurring task has no scheduled date or due date.
 - A task may change between recurring types at any time; existing completions are kept and the new rule governs relevance from then on.
 - An incomplete one-time task may become recurring (its date is cleared); a completed one-time task may not until it is marked incomplete.

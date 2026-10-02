@@ -10,6 +10,7 @@ import {
   startOfWeek,
   formatCalendarDate,
   formatLongCalendarDate,
+  formatWeekRange,
   parseCalendarDate,
   todayFor,
 } from "./calendar-date";
@@ -193,5 +194,23 @@ describe("formatLongCalendarDate", () => {
   it("names the weekday, day and month", () => {
     expect(formatLongCalendarDate("2026-10-02")).toBe("Friday 2 October");
     expect(formatLongCalendarDate("2026-12-31")).toBe("Thursday 31 December");
+  });
+});
+
+describe("formatWeekRange", () => {
+  it("writes the year once when both dates share it", () => {
+    expect(formatWeekRange("2026-09-28", "2026-10-04")).toBe("28. September – 4. Oktober 2026");
+  });
+
+  it("writes both years across a year boundary", () => {
+    expect(formatWeekRange("2026-12-28", "2027-01-03")).toBe("28. Dezember 2026 – 3. Januar 2027");
+  });
+
+  it("repeats the month inside one month and keeps single-digit days unpadded", () => {
+    expect(formatWeekRange("2026-10-05", "2026-10-11")).toBe("5. Oktober – 11. Oktober 2026");
+  });
+
+  it("uses German month names with umlauts", () => {
+    expect(formatWeekRange("2026-03-02", "2026-03-08")).toBe("2. März – 8. März 2026");
   });
 });

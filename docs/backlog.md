@@ -54,11 +54,11 @@ Detailed requirements for larger features should be defined through OpenSpec bef
 
 ### 6. Weekly Overview
 
-- [ ] Seven-day week view
-- [ ] Scheduled tasks per day
-- [ ] Weekly-frequency tasks
-- [ ] Previous / next week navigation
-- [ ] Respect user's week-start preference
+- [x] Seven-day week view
+- [x] Scheduled tasks per day
+- [x] Weekly-frequency tasks
+- [x] Previous / next week navigation
+- [ ] Respect user's week-start preference (deferred to Settings: Monday–Sunday is fixed until then, and all week-based behavior must change together)
 
 ### 7. Progress
 
