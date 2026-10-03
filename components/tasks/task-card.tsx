@@ -50,12 +50,12 @@ export function TaskCard({ task }: { task: TaskRecord }) {
 
       <div className="min-w-0 flex-1 basis-40">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className={`break-words font-semibold ${task.completed ? "text-muted line-through" : ""}`}>
+          <h2 className={`wrap-anywhere font-semibold ${task.completed ? "text-muted line-through" : ""}`}>
             {task.title}
           </h2>
           <LifeAreaBadge area={task.lifeArea} />
         </div>
-        {task.notes ? <p className="mt-1 whitespace-pre-line break-words text-sm text-muted">{task.notes}</p> : null}
+        {task.notes ? <p className="mt-1 whitespace-pre-line wrap-anywhere text-sm text-muted">{task.notes}</p> : null}
         {label ? <p className="mt-2 text-xs text-muted">{label}</p> : null}
         {recurrenceText ? (
           <p className="mt-2 text-xs text-muted">

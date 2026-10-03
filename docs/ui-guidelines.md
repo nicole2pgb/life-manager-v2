@@ -4,6 +4,8 @@
 
 The production UI should follow the validated Lovable prototype as closely as reasonably possible while remaining functional and responsive.
 
+The screenshots are inspiration, not a requirement for pixel-perfect fidelity. For the MVP the existing top navigation is kept instead of the sidebar and user-menu dropdown shown in them; those are post-MVP.
+
 Reference screenshots are stored in:
 
 docs/ui-reference/
@@ -22,8 +24,8 @@ docs/ui-reference/
 
 ### Desktop
 
-- Persistent navigation sidebar on the left
-- Main content area on the right
+- Top navigation with all entries (a persistent left sidebar is post-MVP)
+- Main content area below it
 - Dashboard content organized in cards and sections
 - Important information should be visible without unnecessary navigation
 
@@ -31,7 +33,7 @@ docs/ui-reference/
 
 - Layout must remain usable on smaller screens
 - Content may stack vertically
-- Navigation may adapt for mobile
+- The top navigation wraps; it must stay readable and tappable at 375 px
 - No horizontal overflow
 
 ## Components

@@ -37,7 +37,7 @@ export default async function DashboardPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-accent">{formatLongCalendarDate(today)}</p>
-          <h1 className="mt-1 break-words text-3xl font-bold">Hello, {firstName}</h1>
+          <h1 className="mt-1 wrap-anywhere text-3xl font-bold">Hello, {firstName}</h1>
           <p className="mt-1 text-sm text-muted">
             {openCount === 0
               ? "No priorities left today."
