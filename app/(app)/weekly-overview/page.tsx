@@ -4,6 +4,7 @@ import { LifeAreaBadge } from "@/components/tasks/life-area-badge";
 import { DayColumn } from "@/components/weekly-overview/day-column";
 import { FrequencyRow } from "@/components/weekly-overview/frequency-row";
 import { TaskTitleLink } from "@/components/weekly-overview/task-title-link";
+import { getUserSettings } from "@/db/settings";
 import { getWeeklyOverview } from "@/db/tasks";
 import { getCurrentUser } from "@/lib/auth/session";
 import { startOfWeek, formatWeekRange } from "@/lib/dates/calendar-date";
@@ -30,8 +31,9 @@ export default async function WeeklyOverviewPage({
   if (!user) redirect("/login");
 
   const today = await getTodayFor(user.id);
-  const currentWeek = startOfWeek(today);
-  const weekStart = resolveWeek((await searchParams).week, today);
+  const { weekStart: weekStartDay } = await getUserSettings(user.id);
+  const currentWeek = startOfWeek(today, weekStartDay);
+  const weekStart = resolveWeek((await searchParams).week, today, weekStartDay);
   const overview = await getWeeklyOverview(user.id, weekStart, today, await getUserTimeZone(user.id));
   const { previous, next } = adjacentWeeks(weekStart);
   const isCurrentWeek = weekStart === currentWeek;
@@ -55,7 +57,7 @@ export default async function WeeklyOverviewPage({
         <div className="min-w-0 text-center">
           <h2 className="text-base font-semibold sm:text-lg">{formatWeekRange(overview.weekStart, overview.weekEnd)}</h2>
           <p className="mt-0.5 text-xs text-muted">
-            {isCurrentWeek ? "This week · " : null}Weeks start on Monday
+            {isCurrentWeek ? "This week · " : null}Weeks start on {weekStartDay}
           </p>
           {isCurrentWeek ? null : (
             <Link href="/weekly-overview" className="mt-1 inline-block text-sm font-semibold text-accent hover:underline">

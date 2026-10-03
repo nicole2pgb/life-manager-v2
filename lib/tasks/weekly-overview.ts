@@ -1,13 +1,12 @@
 import type { LifeArea } from "@/db/schema";
-import { addDays, endOfWeek, isoWeekday, parseCalendarDate, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
+import { addDays, isoWeekday, parseCalendarDate, startOfWeek, type CalendarDate, type WeekStartDay } from "@/lib/dates/calendar-date";
 import { dayOccurrence, weekOccurrences, type PlanningTask } from "./planning";
 
 // Builds the Weekly Overview from plain task data. Pure: no database, no clock,
 // no time zone. Day placement comes from `dayOccurrence` in planning.ts, the
 // same definition `weekOccurrences` counts, so the entries here always add up
-// to the planned occurrences of the Dashboard's weekly progress. Weeks run
-// Monday to Sunday; the week start is deliberately not read from user settings
-// (the Settings feature changes all week-based behavior together).
+// to the planned occurrences of the Dashboard's weekly progress. Weeks
+// start on the user's week start day, passed in by the caller.
 
 export type WeeklyOverviewTaskInput = PlanningTask & {
   id: number;
@@ -22,20 +21,24 @@ function isSupportedWeek(weekStart: CalendarDate): boolean {
   return parseCalendarDate(weekStart) !== null && parseCalendarDate(addDays(weekStart, 6)) !== null;
 }
 
-// The Monday of the week selected by the `week` query value; the current week
+// The first day of the week selected by the `week` query value; the current week
 // for a missing, repeated or invalid value or a week outside the supported range.
-export function resolveWeek(param: string | string[] | undefined, today: CalendarDate): CalendarDate {
+export function resolveWeek(
+  param: string | string[] | undefined,
+  today: CalendarDate,
+  weekStartDay: WeekStartDay,
+): CalendarDate {
   if (typeof param === "string") {
     const date = parseCalendarDate(param);
     if (date !== null) {
-      const weekStart = startOfWeek(date);
+      const weekStart = startOfWeek(date, weekStartDay);
       if (isSupportedWeek(weekStart)) return weekStart;
     }
   }
-  return startOfWeek(today);
+  return startOfWeek(today, weekStartDay);
 }
 
-// The Mondays of the previous and next week; null where that week would not be
+// The first days of the previous and next week; null where that week would not be
 // fully inside the supported date range.
 export function adjacentWeeks(weekStart: CalendarDate): { previous: CalendarDate | null; next: CalendarDate | null } {
   const previous = addDays(weekStart, -7);
@@ -117,5 +120,5 @@ export function buildWeeklyOverview(
     }
   }
 
-  return { weekStart, weekEnd: endOfWeek(weekStart), days, frequency, openTasks, hasTasks: tasks.length > 0 };
+  return { weekStart, weekEnd: addDays(weekStart, 6), days, frequency, openTasks, hasTasks: tasks.length > 0 };
 }

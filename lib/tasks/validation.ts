@@ -110,7 +110,8 @@ function validateSchedule(
 // Pure and clock-free: a date in the past, today or the future is valid.
 export function validateTaskInput(
   input: TaskInput,
-  options: { mode: "create" | "update" },
+  // `allowedAreas`: the life areas the task may be saved in (see lib/settings/life-areas.ts).
+  options: { mode: "create" | "update"; allowedAreas: readonly LifeArea[] },
 ): { ok: true; value: ValidTask } | { ok: false; errors: TaskFieldErrors } {
   const errors: TaskFieldErrors = {};
 
@@ -122,6 +123,7 @@ export function validateTaskInput(
   if (notes.length > NOTES_MAX_LENGTH) errors.notes = `Notes must be at most ${NOTES_MAX_LENGTH} characters.`;
 
   if (!isLifeArea(input.lifeArea)) errors.lifeArea = "Choose a life area.";
+  else if (!options.allowedAreas.includes(input.lifeArea)) errors.lifeArea = "Choose one of your selected life areas.";
 
   const rule = validateRule(input);
   if ("error" in rule) errors[rule.field] = rule.error;

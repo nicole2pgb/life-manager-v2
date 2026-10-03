@@ -112,8 +112,8 @@ export function addDays(date: CalendarDate, days: number): CalendarDate {
 
 export type WeekStartDay = "Monday" | "Sunday";
 
-// The MVP uses Monday-Sunday weeks everywhere; the parameter exists so a later
-// user setting (user_settings.week_start) only changes the callers' argument.
+// Application code passes the user's week start (user_settings.week_start);
+// the Monday default only serves callers that do not depend on the setting.
 export function startOfWeek(date: CalendarDate, weekStart: WeekStartDay = "Monday"): CalendarDate {
   const weekday = isoWeekday(date);
   const offset = weekStart === "Monday" ? weekday - 1 : weekday % 7;

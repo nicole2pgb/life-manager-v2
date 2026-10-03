@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { ProgressView } from "@/components/progress/progress-view";
+import { getUserSettings } from "@/db/settings";
 import { getProgress } from "@/db/tasks";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getTodayFor, getUserTimeZone } from "@/lib/dates/time-zone";
@@ -12,6 +13,7 @@ export default async function ProgressPage() {
   if (!user) redirect("/login");
 
   const today = await getTodayFor(user.id);
-  const progress = await getProgress(user.id, today, await getUserTimeZone(user.id));
+  const { weekStart } = await getUserSettings(user.id);
+  const progress = await getProgress(user.id, today, await getUserTimeZone(user.id), weekStart);
   return <ProgressView progress={progress} />;
 }

@@ -64,7 +64,7 @@ describe.skipIf(!url)("dashboard data layer", () => {
   const titles = (dash: Awaited<ReturnType<Tasks["getDashboard"]>>) => dash.items.map((i) => i.title);
 
   it("returns a new user's empty dashboard", async () => {
-    const dash = await t.getDashboard(userB, TUE, TZ);
+    const dash = await t.getDashboard(userB, TUE, TZ, "Monday");
     expect(dash).toMatchObject({ items: [], hasTasks: false });
     expect(dash.week.percent).toBeNull();
   });
@@ -76,9 +76,9 @@ describe.skipIf(!url)("dashboard data layer", () => {
     const futureId = await make(userA, "future", oneTime, { kind: "scheduled", date: "2026-10-09" });
     const undatedId = await make(userA, "undated", oneTime);
     for (const id of [dailyId, overdueId, carriedId, futureId, undatedId]) await createdAt(id, OLD);
-    await t.setTaskCompleted(userA, dailyId, true, TUE);
+    await t.setTaskCompleted(userA, dailyId, true, TUE, "Monday");
 
-    const dash = await t.getDashboard(userA, TUE, TZ);
+    const dash = await t.getDashboard(userA, TUE, TZ, "Monday");
     // overdue first, then open in newest-created order, done last; "future" is not listed.
     expect(titles(dash).filter((x) => x !== "daily").sort()).toEqual(["carried", "overdue", "undated"]);
     expect(titles(dash)[0]).toBe("overdue");
@@ -93,18 +93,18 @@ describe.skipIf(!url)("dashboard data layer", () => {
     expect(dash).toMatchObject({ openCount: 3, doneCount: 1 });
 
     // Completing the carried-over and overdue tasks changes Today but never this week's numbers.
-    await t.setTaskCompleted(userA, overdueId, true, TUE);
-    await t.setTaskCompleted(userA, carriedId, true, TUE);
-    const after = await t.getDashboard(userA, TUE, TZ);
+    await t.setTaskCompleted(userA, overdueId, true, TUE, "Monday");
+    await t.setTaskCompleted(userA, carriedId, true, TUE, "Monday");
+    const after = await t.getDashboard(userA, TUE, TZ, "Monday");
     expect(after.week).toMatchObject({ planned: 8, completed: 1 });
     expect(after.doneCount).toBe(3);
 
     // The next day only the open task and the recurring one remain.
-    const wed = await t.getDashboard(userA, "2026-10-07", TZ);
+    const wed = await t.getDashboard(userA, "2026-10-07", TZ, "Monday");
     expect(titles(wed).sort()).toEqual(["daily", "undated"]);
     // Completing the scheduled task counts in its own week.
-    await t.setTaskCompleted(userA, futureId, true, "2026-10-07");
-    expect((await t.getDashboard(userA, "2026-10-07", TZ)).week).toMatchObject({ planned: 8, completed: 2 });
+    await t.setTaskCompleted(userA, futureId, true, "2026-10-07", "Monday");
+    expect((await t.getDashboard(userA, "2026-10-07", TZ, "Monday")).week).toMatchObject({ planned: 8, completed: 2 });
   });
 
   it("limits planned occurrences to the creation date, in the application time zone", async () => {
@@ -112,50 +112,50 @@ describe.skipIf(!url)("dashboard data layer", () => {
     const midweek = await make(userC, "midweek", daily);
     // 2026-10-05 22:30 UTC is already Tuesday 2026-10-06 00:30 in Berlin: 6 days remain, not 7.
     await createdAt(midweek, "2026-10-05T22:30:00Z");
-    expect((await t.getDashboard(userC, TUE, "Europe/Berlin")).week.planned).toBe(6);
+    expect((await t.getDashboard(userC, TUE, "Europe/Berlin", "Monday")).week.planned).toBe(6);
     // The same instant in UTC is still Monday: all 7 days.
-    expect((await t.getDashboard(userC, TUE, "UTC")).week.planned).toBe(7);
+    expect((await t.getDashboard(userC, TUE, "UTC", "Monday")).week.planned).toBe(7);
     await t.deleteTask(userC, midweek);
 
     const gym = await make(userC, "gym", { type: "times_per_week", timesPerWeek: 3 });
     await createdAt(gym, "2026-10-10T08:00:00Z"); // Saturday: min(3, 2 remaining days)
-    expect((await t.getDashboard(userC, TUE, TZ)).week.planned).toBe(2);
+    expect((await t.getDashboard(userC, TUE, TZ, "Monday")).week.planned).toBe(2);
     await createdAt(gym, "2026-10-06T08:00:00Z"); // Tuesday: min(3, 6)
-    expect((await t.getDashboard(userC, TUE, TZ)).week.planned).toBe(3);
+    expect((await t.getDashboard(userC, TUE, TZ, "Monday")).week.planned).toBe(3);
     await createdAt(gym, "2026-10-12T08:00:00Z"); // after the week
-    expect((await t.getDashboard(userC, TUE, TZ)).week.planned).toBe(0);
+    expect((await t.getDashboard(userC, TUE, TZ, "Monday")).week.planned).toBe(0);
     await t.deleteTask(userC, gym);
   });
 
   it("shows completed-today and hides completed-earlier one-time tasks", async () => {
     const id = await make(userA, "once", oneTime);
     await createdAt(id, OLD);
-    await t.setTaskCompleted(userA, id, true, TUE);
-    expect(titles(await t.getDashboard(userA, TUE, TZ))).toContain("once");
-    expect(titles(await t.getDashboard(userA, "2026-10-07", TZ))).not.toContain("once");
-    await t.setTaskCompleted(userA, id, false, "2026-10-07");
-    expect(titles(await t.getDashboard(userA, "2026-10-07", TZ))).toContain("once");
+    await t.setTaskCompleted(userA, id, true, TUE, "Monday");
+    expect(titles(await t.getDashboard(userA, TUE, TZ, "Monday"))).toContain("once");
+    expect(titles(await t.getDashboard(userA, "2026-10-07", TZ, "Monday"))).not.toContain("once");
+    await t.setTaskCompleted(userA, id, false, "2026-10-07", "Monday");
+    expect(titles(await t.getDashboard(userA, "2026-10-07", TZ, "Monday"))).toContain("once");
   });
 
   it("hides a times-per-week task after its target and keeps it when reached today", async () => {
     const id = await make(userA, "twice", { type: "times_per_week", timesPerWeek: 2 });
     await createdAt(id, OLD);
-    await t.setTaskCompleted(userA, id, true, "2026-10-05");
-    await t.setTaskCompleted(userA, id, true, TUE);
-    expect(await t.getDashboard(userA, TUE, TZ)).toMatchObject({ items: expect.arrayContaining([expect.objectContaining({ title: "twice", done: true, weekCount: 2 })]) });
-    expect(titles(await t.getDashboard(userA, "2026-10-07", TZ))).not.toContain("twice");
-    expect(titles(await t.getDashboard(userA, "2026-10-12", TZ))).toContain("twice");
+    await t.setTaskCompleted(userA, id, true, "2026-10-05", "Monday");
+    await t.setTaskCompleted(userA, id, true, TUE, "Monday");
+    expect(await t.getDashboard(userA, TUE, TZ, "Monday")).toMatchObject({ items: expect.arrayContaining([expect.objectContaining({ title: "twice", done: true, weekCount: 2 })]) });
+    expect(titles(await t.getDashboard(userA, "2026-10-07", TZ, "Monday"))).not.toContain("twice");
+    expect(titles(await t.getDashboard(userA, "2026-10-12", TZ, "Monday"))).toContain("twice");
   });
 
   it("never exposes or counts another user's tasks and reflects deletes", async () => {
     const own = await make(userB, "b-only", daily);
     await createdAt(own, OLD);
-    await t.setTaskCompleted(userB, own, true, MON);
-    expect(titles(await t.getDashboard(userA, TUE, TZ))).not.toContain("b-only");
-    const b = await t.getDashboard(userB, TUE, TZ);
+    await t.setTaskCompleted(userB, own, true, MON, "Monday");
+    expect(titles(await t.getDashboard(userA, TUE, TZ, "Monday"))).not.toContain("b-only");
+    const b = await t.getDashboard(userB, TUE, TZ, "Monday");
     expect(titles(b)).toEqual(["b-only"]);
     expect(b.week).toMatchObject({ planned: 7, completed: 1 });
     await t.deleteTask(userB, own);
-    expect((await t.getDashboard(userB, TUE, TZ)).hasTasks).toBe(false);
+    expect((await t.getDashboard(userB, TUE, TZ, "Monday")).hasTasks).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TodayRow } from "@/components/dashboard/today-row";
 import { WeeklyProgress } from "@/components/dashboard/weekly-progress";
+import { getUserSettings } from "@/db/settings";
 import { getDashboard } from "@/db/tasks";
 import { getCurrentUser } from "@/lib/auth/session";
 import { formatLongCalendarDate } from "@/lib/dates/calendar-date";
@@ -23,7 +24,8 @@ export default async function DashboardPage({
   if (!user) redirect("/login");
 
   const today = await getTodayFor(user.id);
-  const dashboard = await getDashboard(user.id, today, await getUserTimeZone(user.id));
+  const { weekStart } = await getUserSettings(user.id);
+  const dashboard = await getDashboard(user.id, today, await getUserTimeZone(user.id), weekStart);
   const noticeKey = (await searchParams).notice;
   const notice = typeof noticeKey === "string" && Object.hasOwn(TASK_NOTICES, noticeKey) ? TASK_NOTICES[noticeKey] : null;
 

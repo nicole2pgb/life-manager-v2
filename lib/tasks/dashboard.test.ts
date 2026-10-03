@@ -24,16 +24,16 @@ describe("buildDashboard", () => {
     const done = make({ title: "done", done: [TODAY] });
     const open2 = make({ title: "open2", rule: { type: "daily" } });
     const overdue = make({ title: "overdue", dueDate: "2026-10-01" });
-    const dash = buildDashboard([open1, done, open2, overdue], TODAY);
+    const dash = buildDashboard([open1, done, open2, overdue], TODAY, "Monday");
     expect(dash.items.map((i) => i.title)).toEqual(["overdue", "open1", "open2", "done"]);
     expect(dash).toMatchObject({ openCount: 3, doneCount: 1, hasTasks: true });
   });
   it("has tasks but no items when nothing is relevant today", () => {
-    const dash = buildDashboard([make({ scheduledDate: "2026-10-07" })], TODAY);
+    const dash = buildDashboard([make({ scheduledDate: "2026-10-07" })], TODAY, "Monday");
     expect(dash).toMatchObject({ items: [], hasTasks: true, openCount: 0 });
   });
   it("reports a new user without tasks", () => {
-    const dash = buildDashboard([], TODAY);
+    const dash = buildDashboard([], TODAY, "Monday");
     expect(dash).toMatchObject({ items: [], hasTasks: false });
     expect(dash.week.percent).toBeNull();
   });
@@ -42,13 +42,13 @@ describe("buildDashboard", () => {
       rule: { type: "times_per_week", timesPerWeek: 2 },
       done: ["2026-10-04", "2026-10-05", TODAY],
     });
-    const dash = buildDashboard([task], TODAY);
+    const dash = buildDashboard([task], TODAY, "Monday");
     expect(dash.items[0]).toMatchObject({ weekCount: 2, done: true });
   });
   it("summarises the current week without counting Today-only tasks", () => {
     const dash = buildDashboard(
       [make({ rule: { type: "daily" }, done: [TODAY] }), make({}), make({ dueDate: "2026-09-20" })],
-      TODAY,
+      TODAY, "Monday"
     );
     expect(dash.items).toHaveLength(3);
     expect(dash.week).toMatchObject({ planned: 7, completed: 1, open: 6, percent: 14 });

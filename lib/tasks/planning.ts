@@ -1,4 +1,4 @@
-import { addDays, endOfWeek, startOfWeek, isoWeekday, type CalendarDate } from "@/lib/dates/calendar-date";
+import { addDays, startOfWeek, isoWeekday, type CalendarDate, type WeekStartDay } from "@/lib/dates/calendar-date";
 import { isRelevantOn, type RecurrenceRule } from "./recurrence";
 
 // Today membership and weekly planned occurrences. Pure like recurrence.ts: no
@@ -36,11 +36,11 @@ export type TodayStatus = {
 
 const NOT_LISTED: TodayStatus = { listed: false, done: false, overdue: false };
 
-export function todayStatus(task: PlanningTask, today: CalendarDate): TodayStatus {
+export function todayStatus(task: PlanningTask, today: CalendarDate, weekStartDay: WeekStartDay): TodayStatus {
   const { rule } = task;
   if (rule.type !== "none") {
     const done = task.completionDates.has(today);
-    const weekStart = startOfWeek(today);
+    const weekStart = startOfWeek(today, weekStartDay);
     const completionDatesInWeek = new Set([...task.completionDates].filter((d) => inWeek(d, weekStart)));
     const listed = done || isRelevantOn(rule, today, { completionDatesInWeek });
     return listed ? { listed, done, overdue: false } : NOT_LISTED;
@@ -95,8 +95,8 @@ export function dayOccurrence(task: PlanningTask, date: CalendarDate): DayOccurr
 
 export type WeekOccurrences = { planned: number; completed: number };
 
-// Planned and completed occurrences of one task in the Monday-Sunday week that
-// starts at `weekStart`, using the task's current definition. completed <= planned.
+// Planned and completed occurrences of one task in the seven-day week that
+// starts at `weekStart` (the first day of the user's week), using the task's current definition. completed <= planned.
 export function weekOccurrences(task: PlanningTask, weekStart: CalendarDate): WeekOccurrences {
   const { rule, createdOn, completionDates } = task;
   const days = weekDates(weekStart);
@@ -141,7 +141,7 @@ export function summarizeWeek(tasks: readonly PlanningTask[], weekStart: Calenda
   }
   return {
     weekStart,
-    weekEnd: endOfWeek(weekStart),
+    weekEnd: addDays(weekStart, 6),
     planned,
     completed,
     open: planned - completed,

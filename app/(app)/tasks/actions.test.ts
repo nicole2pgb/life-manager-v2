@@ -74,12 +74,12 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
   });
 
   const create = async (fields: Record<string, string | string[]>) => {
-    const before = (await tasks.listTasks(userA, clock.today)).map((t) => t.id);
+    const before = (await tasks.listTasks(userA, clock.today, "Monday")).map((t) => t.id);
     const result = await actions
       .createTaskAction(null, form({ ...common, ...fields }))
       .then((r) => ({ state: r }))
       .catch((e: Error) => ({ redirect: e.message }));
-    const after = await tasks.listTasks(userA, clock.today);
+    const after = await tasks.listTasks(userA, clock.today, "Monday");
     return { result, created: after.find((t) => !before.includes(t.id)) };
   };
   const completions = async (id: number) => {
@@ -102,7 +102,7 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
   it("ignores a forged user id on create", async () => {
     const { created } = await create({ recurrence: "daily", userId: String(userB) });
     expect(created).toBeDefined();
-    expect(await tasks.getTask(userB, created!.id, clock.today)).toBeNull();
+    expect(await tasks.getTask(userB, created!.id, clock.today, "Monday")).toBeNull();
   });
 
   it("rejects completion on a non-relevant day, with a notice redirect and nothing written", async () => {
@@ -143,7 +143,7 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
     await expect(actions.updateTaskAction(null, form({ ...common, taskId: id, recurrence: "daily" }))).rejects.toThrow("NOT_FOUND");
     session.id = userA;
     expect(await completions(created!.id)).toEqual(["2026-10-06"]);
-    expect((await tasks.getTask(userA, created!.id, clock.today))!.rule).toEqual({ type: "daily" });
+    expect((await tasks.getTask(userA, created!.id, clock.today, "Monday"))!.rule).toEqual({ type: "daily" });
   });
 
   it("rejects converting a recurring task with history to one-time, even when posted directly", async () => {
@@ -153,7 +153,7 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
     clock.today = "2026-10-07"; // none today, an older completion exists
     const state = await actions.updateTaskAction(null, form({ ...common, taskId: id, recurrence: "none", dateKind: "none" }));
     expect(state?.errors?.recurrence).toMatch(/recurring completion history/);
-    expect((await tasks.getTask(userA, created!.id, clock.today))!.rule).toEqual({ type: "daily" });
+    expect((await tasks.getTask(userA, created!.id, clock.today, "Monday"))!.rule).toEqual({ type: "daily" });
     expect(await completions(created!.id)).toEqual(["2026-10-06"]);
   });
 
@@ -165,7 +165,7 @@ describe.skipIf(!url)("task Server Actions with recurrence", () => {
     expect(state?.errors?.recurrence).toMatch(/incomplete/);
     await redirected(actions.setTaskCompletedAction(form({ taskId: id, completed: "false" })));
     expect(await redirected(actions.updateTaskAction(null, form({ ...common, taskId: id, recurrence: "daily" })))).toBe("/tasks");
-    const task = (await tasks.getTask(userA, created!.id, clock.today))!;
+    const task = (await tasks.getTask(userA, created!.id, clock.today, "Monday"))!;
     expect(task.rule).toEqual({ type: "daily" });
     expect(task.schedule).toEqual({ kind: "none" });
   });

@@ -96,11 +96,11 @@ Defined in `lib/tasks/planning.ts` (`todayStatus`); the Dashboard / Today featur
 
 ### Weekly planned occurrences
 
-Defined in `lib/tasks/planning.ts` (`weekOccurrences`, `summarizeWeek`) for a Monday–Sunday week; the Dashboard weekly progress uses it, and Weekly Overview and Progress reuse it. The creation date is the calendar date of `created_at` in the application time zone.
+Defined in `lib/tasks/planning.ts` (`weekOccurrences`, `summarizeWeek`) for a seven-day week starting on the user's week start (Monday by default; examples below assume Monday); the Dashboard weekly progress uses it, and Weekly Overview and Progress reuse it. The creation date is the calendar date of `created_at` in the application time zone.
 
 - Daily: one occurrence per day of the week on or after the creation date.
 - Specific weekdays: one occurrence per selected weekday on or after the creation date.
-- Times per week: the weekly target; in the creation week, `min(target, days from the creation date through Sunday)`; nothing in earlier weeks.
+- Times per week: the weekly target; in the creation week, `min(target, days from the creation date through the last day of the week)`; nothing in earlier weeks.
 - One-time task with a scheduled or due date: exactly one occurrence in the week containing that date, even if the date is before the creation date. A due-date task counts once, not per day. It adds nothing to other weeks.
 - Undated one-time task: no planned occurrences.
 - Completed occurrences: daily/weekday completions count only on planned days under the task's current rule; times-per-week completions on or after the creation date are capped at the week's effective target; a completed dated one-time task counts in its dated week regardless of the completion date. Completed never exceeds planned.
@@ -109,7 +109,7 @@ Defined in `lib/tasks/planning.ts` (`weekOccurrences`, `summarizeWeek`) for a Mo
 
 ### Weekly Overview placement
 
-The Weekly Overview (`lib/tasks/weekly-overview.ts`) is read-only and shows one Monday–Sunday week. It follows the planned-occurrence rules above, so its entries add up to the Dashboard's weekly numbers:
+The Weekly Overview (`lib/tasks/weekly-overview.ts`) is read-only and shows one seven-day week starting on the user's week start. It follows the planned-occurrence rules above, so its entries add up to the Dashboard's weekly numbers:
 
 - Daily and specific-weekday tasks appear on their planned days, never before the creation date.
 - A dated one-time task appears only on its scheduled or due date, shown as done when it is completed (whatever the completion date). Incomplete dated tasks stay on their date: no carry-forward, no overdue or missed state.
@@ -146,7 +146,7 @@ Monday + Thursday
 
 ### Times Per Week
 
-The task has a weekly completion target (1–7) without fixed weekdays. It is relevant on each day of the current calendar week while the number of completion dates in that week is below the target, and on a day on which it was completed. Once the target is reached it is not relevant on the remaining days of the week; a new week resets the count. Weeks run Monday–Sunday in the MVP (the week-start helpers take a parameter for a later user setting).
+The task has a weekly completion target (1–7) without fixed weekdays. It is relevant on each day of the current calendar week while the number of completion dates in that week is below the target, and on a day on which it was completed. Once the target is reached it is not relevant on the remaining days of the week; a new week resets the count. Weeks start on the user's week start setting (Monday by default).
 
 Example:
 
@@ -225,12 +225,16 @@ Supported life areas:
 - Personal
 - Finance
 
+Defaults (used for a user who never saved settings; the row is created on the first save, not at registration): theme Pink, week start Monday, daily check-in off at 09:00, all six life areas selected.
+
 Rules:
 
 - Settings belong to exactly one user.
 - Settings must persist between sessions.
 - Changing the theme color should update the application's accent color.
 - Daily check-in configuration does not send actual notifications in the MVP.
+- Week start (Monday or Sunday) decides the first day of every week-based calculation and view (see `architecture.md`); it never rewrites tasks, recurrence rules or completions, and recurrence weekdays stay ISO numbers.
+- Selected life areas (at least one) limit the choices in the task create/edit forms only. Existing tasks keep their area and Progress still covers all six areas.
 
 ---
 
@@ -240,7 +244,7 @@ Progress is calculated from tasks, recurrence rules and task completions.
 
 It is not a separate primary data entity in the MVP.
 
-Calculated values for the Progress screen (`lib/tasks/progress.ts`), always for the current Monday–Sunday week; nothing is stored:
+Calculated values for the Progress screen (`lib/tasks/progress.ts`), always for the current week (seven days from the user's week start); nothing is stored:
 
 - **Weekly completion rate and weekly completion visualization:** the week's completed and planned occurrences from `summarizeWeek`, the same numbers as the Dashboard. No percentage when nothing is planned.
 - **Current streak:** consecutive calendar days with at least one completion of any of the user's tasks (any completion row, whether or not the weekly numbers count it). It ends today if today has a completion; otherwise it continues from yesterday, so an unfinished today never breaks it. A fully elapsed day without a completion breaks it. It can span weeks. Deleting a task deletes its completions and can shorten the streak.
