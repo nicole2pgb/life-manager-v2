@@ -5,7 +5,7 @@ export function TaskTitleLink({ id, title, done }: { id: number; title: string; 
   return (
     <Link
       href={`/tasks/${id}/edit`}
-      className={`break-words font-medium hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
+      className={`wrap-anywhere font-medium hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
         done ? "text-muted line-through" : ""
       }`}
     >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 import Link from "next/link";
 import type { TaskFormState } from "@/lib/tasks/form-state";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -75,7 +75,7 @@ export function TaskForm({
   // Convenience only: the server enforces it independently.
   historyLocked?: boolean;
 }) {
-  const [state, formAction] = useActionState(action, null);
+  const [state, formAction, isPending] = useActionState(action, null);
   const errors = state?.errors;
 
   const [title, setTitle] = useState(initial.title);
@@ -87,8 +87,18 @@ export function TaskForm({
   const [weekdays, setWeekdays] = useState<string[]>(initial.weekdays);
   const [timesPerWeek, setTimesPerWeek] = useState(initial.timesPerWeek);
 
+  // Submitted through onSubmit instead of the form's `action` prop: React resets
+  // a form after an `action` completes, which would put the controlled radios
+  // (recurrence, date choice, life area) back to their initial DOM state while
+  // the component state, and the fields shown, have moved on.
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    startTransition(() => formAction(data));
+  };
+
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       {taskId !== undefined ? <input type="hidden" name="taskId" value={taskId} /> : null}
 
       {errors?.form ? (
@@ -172,7 +182,12 @@ export function TaskForm({
             <span id="weekdays-label" className="text-sm font-medium">
               Days
             </span>
-            <div role="group" aria-labelledby="weekdays-label" className="flex flex-wrap gap-2">
+            <div
+              role="group"
+              aria-labelledby="weekdays-label"
+              aria-describedby={errors?.weekdays ? "weekdays-error" : undefined}
+              className="flex flex-wrap gap-2"
+            >
               {WEEKDAY_OPTIONS.map((day) => (
                 <label key={day.value} className="relative">
                   <input
@@ -306,7 +321,7 @@ export function TaskForm({
           Cancel
         </Link>
         <div className="min-w-36">
-          <SubmitButton>{submitLabel}</SubmitButton>
+          <SubmitButton pending={isPending}>{submitLabel}</SubmitButton>
         </div>
       </div>
     </form>

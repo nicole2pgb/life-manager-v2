@@ -15,7 +15,7 @@ Manage tasks → Complete today's tasks → Check weekly progress
 - Logout
 - Persistent authenticated session
 - Profile screen showing the user's name and email
-- User menu with access to Profile, Settings and Logout
+- Profile and Settings reachable from the main navigation, and logout available on the Profile screen
 - Each user can only access their own data
 
 ### Task Management
@@ -97,6 +97,7 @@ The daily check-in setting is stored in the MVP, but actual reminder delivery or
 - Google Calendar integration
 - Actual notification/reminder delivery
 - Advanced analytics beyond the defined Progress screen
+- Sidebar navigation, a dedicated mobile navigation pattern and a user-menu dropdown (the top navigation is the MVP navigation)
 - Animations
 - Social features
 

@@ -8,23 +8,23 @@ Detailed requirements for larger features should be defined through OpenSpec bef
 
 ### 1. Project Foundation
 
-- [ ] Configure project structure
-- [ ] Install required dependencies
-- [ ] Configure MySQL
-- [ ] Configure Drizzle ORM
-- [ ] Create initial database schema
-- [ ] Create initial migration
+- [x] Configure project structure
+- [x] Install required dependencies
+- [x] Configure MySQL
+- [x] Configure Drizzle ORM
+- [x] Create initial database schema
+- [x] Create initial migration
 
 ### 2. Authentication & User Account
 
-- [ ] User registration
-- [ ] User login
-- [ ] Session management
-- [ ] Protected application routes
-- [ ] User profile
-- [ ] User menu
-- [ ] Logout
-- [ ] User data isolation
+- [x] User registration
+- [x] User login
+- [x] Session management
+- [x] Protected application routes
+- [x] User profile
+- [x] User menu (Profile and Settings in the top navigation, logout on Profile; dropdown is post-MVP)
+- [x] Logout
+- [x] User data isolation
 
 ### 3. Task Management
 
@@ -82,17 +82,18 @@ Note: Daily check-in notifications are not delivered in the MVP.
 
 ### 9. MVP Quality
 
-- [ ] Loading states
-- [ ] Error states
-- [ ] Form validation
-- [ ] Responsive layout
-- [ ] Complete core user flow test
-- [ ] Lint
-- [ ] Build
-- [ ] Final code review
+- [x] Loading states
+- [x] Error states
+- [x] Form validation
+- [x] Responsive layout
+- [x] Complete core user flow test
+- [x] Lint
+- [x] Build
+- [x] Final code review
 
 ## Later / Post-MVP
 
+- [ ] Sidebar navigation, mobile navigation pattern and user-menu dropdown
 - [ ] Journal
 - [ ] Goals
 - [ ] Separate habit tracking
