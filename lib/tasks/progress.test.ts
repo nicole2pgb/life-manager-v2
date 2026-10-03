@@ -90,7 +90,7 @@ describe("buildProgress: days", () => {
       make({ rule: { type: "times_per_week", timesPerWeek: 3 }, done: ["2026-10-05", "2026-10-07"] }),
       make({ title: "undated" }),
     ];
-    const { days } = buildProgress(tasks, [], TODAY);
+    const { days } = buildProgress(tasks, [], TODAY, "Monday");
     expect(days.map((d) => [d.planned, d.completed])).toEqual([
       [2, 2], // Mon: daily + weekday
       [2, 2], // Tue: daily + dated one-time (completed on Thursday)
@@ -105,11 +105,11 @@ describe("buildProgress: days", () => {
     expect(days[0].weekday).toBe(1);
   });
   it("leaves days without day-bound occurrences at 0 planned", () => {
-    const { days } = buildProgress([make({ rule: { type: "weekdays", weekdays: [2] } })], [], TODAY);
+    const { days } = buildProgress([make({ rule: { type: "weekdays", weekdays: [2] } })], [], TODAY, "Monday");
     expect(days.map((d) => d.planned)).toEqual([0, 1, 0, 0, 0, 0, 0]);
   });
   it("respects the creation date", () => {
-    const { days } = buildProgress([make({ rule: { type: "daily" }, createdOn: "2026-10-07" })], [], TODAY);
+    const { days } = buildProgress([make({ rule: { type: "daily" }, createdOn: "2026-10-07" })], [], TODAY, "Monday");
     expect(days.map((d) => d.planned)).toEqual([0, 0, 1, 1, 1, 1, 1]);
   });
   it("daily sums plus times-per-week equal the weekly totals", () => {
@@ -119,7 +119,7 @@ describe("buildProgress: days", () => {
       make({ rule: { type: "times_per_week", timesPerWeek: 4 }, done: ["2026-10-05", "2026-10-06"] }),
       make({ rule: { type: "times_per_week", timesPerWeek: 2 }, createdOn: "2026-10-09" }),
     ];
-    const progress = buildProgress(tasks, [], TODAY);
+    const progress = buildProgress(tasks, [], TODAY, "Monday");
     const perWeek = summarizeWeek(tasks.filter((t) => t.rule.type === "times_per_week"), WEEK);
     const dailyPlanned = progress.days.reduce((n, d) => n + d.planned, 0);
     const dailyCompleted = progress.days.reduce((n, d) => n + d.completed, 0);
@@ -136,7 +136,7 @@ describe("buildProgress: life areas, weeks, streak", () => {
       make({ lifeArea: "Career", rule: { type: "daily" }, done: ["2026-10-05"] }),
       make({ lifeArea: "Career", dueDate: "2026-10-10" }),
     ];
-    const { lifeAreas, week } = buildProgress(tasks, [], TODAY);
+    const { lifeAreas, week } = buildProgress(tasks, [], TODAY, "Monday");
     expect(lifeAreas.map((a) => a.area)).toEqual(["Career", "Fitness", "Health", "Learning", "Personal", "Finance"]);
     expect(lifeAreas.find((a) => a.area === "Finance")).toEqual({ area: "Finance", planned: 0, completed: 0, percent: null });
     expect(lifeAreas.find((a) => a.area === "Fitness")).toMatchObject({ planned: 3, completed: 1, percent: 33 });
@@ -144,7 +144,7 @@ describe("buildProgress: life areas, weeks, streak", () => {
     expect(lifeAreas.reduce((n, a) => n + a.completed, 0)).toBe(week.completed);
   });
   it("lists every area for a user without tasks", () => {
-    const progress = buildProgress([], [], TODAY);
+    const progress = buildProgress([], [], TODAY, "Monday");
     expect(progress.lifeAreas).toHaveLength(6);
     expect(progress.lifeAreas.every((a) => a.planned === 0 && a.percent === null)).toBe(true);
     expect(progress).toMatchObject({ hasTasks: false, change: null, streak: 0 });
@@ -155,12 +155,12 @@ describe("buildProgress: life areas, weeks, streak", () => {
       make({ rule: { type: "daily" }, createdOn: "2026-10-05" }), // created this week: nothing last week
       make({ scheduledDate: "2026-09-30", done: ["2026-10-06"] }), // dated last week, completed this week
     ];
-    const { previousWeek, week } = buildProgress(tasks, [], TODAY);
+    const { previousWeek, week } = buildProgress(tasks, [], TODAY, "Monday");
     expect(previousWeek).toMatchObject({ weekStart: "2026-09-28", planned: 1, completed: 1 });
     expect(week.planned).toBe(7); // the daily task's seven days; the dated task adds nothing this week
   });
   it("passes the streak through", () => {
-    expect(buildProgress([], ["2026-10-07", "2026-10-06"], TODAY).streak).toBe(2);
+    expect(buildProgress([], ["2026-10-07", "2026-10-06"], TODAY, "Monday").streak).toBe(2);
   });
 });
 
@@ -174,11 +174,11 @@ describe("buildProgress agrees with Dashboard and Weekly Overview", () => {
     make({ title: "undated" }),
   ];
   it("has the Dashboard's weekly numbers", () => {
-    expect(buildProgress(tasks, [], TODAY).week).toEqual(buildDashboard(tasks, TODAY).week);
+    expect(buildProgress(tasks, [], TODAY, "Monday").week).toEqual(buildDashboard(tasks, TODAY, "Monday").week);
   });
   it("has the Weekly Overview's day counts", () => {
     const overview = buildWeeklyOverview(tasks, WEEK, TODAY);
-    const { days } = buildProgress(tasks, [], TODAY);
+    const { days } = buildProgress(tasks, [], TODAY, "Monday");
     expect(days.map((d) => [d.planned, d.completed])).toEqual(
       overview.days.map((d) => [d.items.length, d.items.filter((i) => i.done).length]),
     );

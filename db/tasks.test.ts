@@ -58,14 +58,14 @@ describe.skipIf(!url)("recurring tasks data layer", () => {
 
   const make = async (rule: Parameters<Tasks["createTask"]>[1]["rule"], schedule?: { kind: "none" } | { kind: "due"; date: string }) =>
     (await t.createTask(userA, { ...base, rule, schedule: schedule as never })).id;
-  const get = async (id: number, today = MON) => (await t.getTask(userA, id, today))!;
+  const get = async (id: number, today = MON) => (await t.getTask(userA, id, today, "Monday"))!;
   const completionDates = async (id: number) => {
     const { eq } = await import("drizzle-orm");
     const rows = await db.select().from(schema.taskCompletions).where(eq(schema.taskCompletions.taskId, id));
     return rows.map((r) => r.completedOn).sort();
   };
-  const complete = (id: number, today: string) => t.setTaskCompleted(userA, id, true, today);
-  const uncomplete = (id: number, today: string) => t.setTaskCompleted(userA, id, false, today);
+  const complete = (id: number, today: string) => t.setTaskCompleted(userA, id, true, today, "Monday");
+  const uncomplete = (id: number, today: string) => t.setTaskCompleted(userA, id, false, today, "Monday");
   const update = (id: number, rule: Parameters<Tasks["updateTask"]>[2]["rule"], schedule?: Parameters<Tasks["updateTask"]>[2]["schedule"]) =>
     t.updateTask(userA, id, { ...base, rule, schedule });
 
@@ -97,12 +97,12 @@ describe.skipIf(!url)("recurring tasks data layer", () => {
       const done = await make(daily);
       await complete(done, MON);
       const open = await make(daily);
-      const list = await t.listTasks(userA, TUE);
+      const list = await t.listTasks(userA, TUE, "Monday");
       const ids = list.map((x) => x.id);
       expect(ids.indexOf(open)).toBeLessThan(ids.indexOf(done)); // both incomplete, newest first
       expect(list.find((x) => x.id === done)!.completed).toBe(false);
       // On the day it was completed it moves to the completed group.
-      const listMon = await t.listTasks(userA, MON);
+      const listMon = await t.listTasks(userA, MON, "Monday");
       expect(listMon.findIndex((x) => x.id === open)).toBeLessThan(listMon.findIndex((x) => x.id === done));
       expect(listMon.find((x) => x.id === done)!.completed).toBe(true);
     });
@@ -256,15 +256,15 @@ describe.skipIf(!url)("recurring tasks data layer", () => {
     it("treats another user's task as not found for read, edit, convert, complete, uncomplete and delete", async () => {
       const id = await make(daily);
       await complete(id, MON);
-      expect(await t.getTask(userB, id, MON)).toBeNull();
+      expect(await t.getTask(userB, id, MON, "Monday")).toBeNull();
       expect(await t.updateTask(userB, id, { ...base, rule: perWeek(2), schedule: undefined })).toBe("not_found");
       expect(await t.updateTask(userB, id, { ...base, rule: oneTime, schedule: { kind: "none" } })).toBe("not_found");
-      expect(await t.setTaskCompleted(userB, id, true, TUE)).toBe("not_found");
-      expect(await t.setTaskCompleted(userB, id, false, MON)).toBe("not_found");
+      expect(await t.setTaskCompleted(userB, id, true, TUE, "Monday")).toBe("not_found");
+      expect(await t.setTaskCompleted(userB, id, false, MON, "Monday")).toBe("not_found");
       expect(await t.deleteTask(userB, id)).toBe("not_found");
       expect((await get(id, TUE)).rule).toEqual(daily);
       expect(await completionDates(id)).toEqual([MON]);
-      expect((await t.listTasks(userB, MON)).some((x) => x.id === id)).toBe(false);
+      expect((await t.listTasks(userB, MON, "Monday")).some((x) => x.id === id)).toBe(false);
     });
     it("deleting a recurring task removes its rule and completions and nothing else", async () => {
       const id = await make(daily);

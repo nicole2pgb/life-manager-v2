@@ -58,7 +58,7 @@ Detailed requirements for larger features should be defined through OpenSpec bef
 - [x] Scheduled tasks per day
 - [x] Weekly-frequency tasks
 - [x] Previous / next week navigation
-- [ ] Respect user's week-start preference (deferred to Settings: Monday–Sunday is fixed until then, and all week-based behavior must change together)
+- [x] Respect user's week-start preference
 
 ### 7. Progress
 
@@ -71,12 +71,12 @@ Detailed requirements for larger features should be defined through OpenSpec bef
 
 ### 8. Settings
 
-- [ ] Theme color selection
-- [ ] Persist selected theme
-- [ ] Week-start preference
-- [ ] Daily check-in preference
-- [ ] Daily check-in time
-- [ ] Life-area selection
+- [x] Theme color selection
+- [x] Persist selected theme
+- [x] Week-start preference
+- [x] Daily check-in preference
+- [x] Daily check-in time
+- [x] Life-area selection
 
 Note: Daily check-in notifications are not delivered in the MVP.
 

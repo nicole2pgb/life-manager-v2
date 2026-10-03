@@ -1,5 +1,5 @@
 import type { LifeArea } from "@/db/schema";
-import { startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
+import { startOfWeek, type CalendarDate, type WeekStartDay } from "@/lib/dates/calendar-date";
 import { summarizeWeek, todayRank, todayStatus, type PlanningTask, type WeekSummary } from "./planning";
 import { cappedWeekCount } from "./recurrence";
 
@@ -36,16 +36,20 @@ export type Dashboard = {
 };
 
 // `tasks` must be in the order they should keep within a group (newest created first).
-export function buildDashboard(tasks: readonly DashboardTaskInput[], today: CalendarDate): Dashboard {
-  const weekStart = startOfWeek(today);
+export function buildDashboard(
+  tasks: readonly DashboardTaskInput[],
+  today: CalendarDate,
+  weekStartDay: WeekStartDay,
+): Dashboard {
+  const weekStart = startOfWeek(today, weekStartDay);
   const items: TodayItem[] = [];
   for (const task of tasks) {
-    const status = todayStatus(task, today);
+    const status = todayStatus(task, today, weekStartDay);
     if (!status.listed) continue;
     const weekCount =
       task.rule.type === "times_per_week"
         ? cappedWeekCount(
-            [...task.completionDates].filter((d) => startOfWeek(d) === weekStart).length,
+            [...task.completionDates].filter((d) => startOfWeek(d, weekStartDay) === weekStart).length,
             task.rule.timesPerWeek,
           )
         : null;

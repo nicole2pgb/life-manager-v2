@@ -1,7 +1,7 @@
 import "server-only";
 
 import { and, asc, between, desc, eq, inArray, or, sql } from "drizzle-orm";
-import { addDays, calendarDateOf, endOfWeek, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
+import { addDays, calendarDateOf, endOfWeek, startOfWeek, type CalendarDate, type WeekStartDay } from "@/lib/dates/calendar-date";
 import { buildDashboard, type Dashboard, type DashboardTaskInput } from "@/lib/tasks/dashboard";
 import { buildProgress, type Progress } from "@/lib/tasks/progress";
 import { buildWeeklyOverview, type WeeklyOverview } from "@/lib/tasks/weekly-overview";
@@ -123,8 +123,13 @@ type TaskRow = {
   ruleTimesPerWeek: number | null;
 };
 
-// Completion dates of the given tasks in the calendar week of `today`, grouped by task.
-async function weekCompletions(taskIds: number[], today: CalendarDate): Promise<Map<number, Set<CalendarDate>>> {
+// Completion dates of the given tasks in the calendar week of `today` (the week
+// starts on `weekStartDay`), grouped by task.
+async function weekCompletions(
+  taskIds: number[],
+  today: CalendarDate,
+  weekStartDay: WeekStartDay,
+): Promise<Map<number, Set<CalendarDate>>> {
   const byTask = new Map<number, Set<CalendarDate>>();
   if (taskIds.length === 0) return byTask;
   const rows = await getDb()
@@ -133,7 +138,7 @@ async function weekCompletions(taskIds: number[], today: CalendarDate): Promise<
     .where(
       and(
         inArray(taskCompletions.taskId, taskIds),
-        between(taskCompletions.completedOn, startOfWeek(today), endOfWeek(today)),
+        between(taskCompletions.completedOn, startOfWeek(today, weekStartDay), endOfWeek(today, weekStartDay)),
       ),
     );
   for (const row of rows) {
@@ -170,7 +175,7 @@ function toRecord(row: TaskRow, week: ReadonlySet<CalendarDate>, today: Calendar
 
 // Incomplete tasks first (recurring: not done today), then newest first.
 // Dates and relevance never affect the list.
-export async function listTasks(userId: number, today: CalendarDate): Promise<TaskRecord[]> {
+export async function listTasks(userId: number, today: CalendarDate, weekStartDay: WeekStartDay): Promise<TaskRecord[]> {
   const rows = await getDb()
     .select(taskSelection)
     .from(tasks)
@@ -180,6 +185,7 @@ export async function listTasks(userId: number, today: CalendarDate): Promise<Ta
   const weeks = await weekCompletions(
     rows.map((row) => row.id),
     today,
+    weekStartDay,
   );
   const records = rows.map((row) => toRecord(row, weeks.get(row.id) ?? new Set(), today));
   // Stable sort: the query already ordered each group newest first.
@@ -187,7 +193,7 @@ export async function listTasks(userId: number, today: CalendarDate): Promise<Ta
 }
 
 // The user's tasks as plain planning data, newest created first. Completions
-// are loaded for the calendar dates `from` through `to` (whole Monday-Sunday
+// are loaded for the calendar dates `from` through `to` (whole seven-day
 // weeks), plus every completion of one-time tasks (their single completion
 // decides "completed today" and the dated week's progress whatever its date).
 // `timeZone` only converts creation instants to calendar dates. Shared by the
@@ -239,12 +245,19 @@ async function loadPlanningTasks(
 }
 
 // Everything the Dashboard shows, for one user.
-export async function getDashboard(userId: number, today: CalendarDate, timeZone: string): Promise<Dashboard> {
-  const weekStart = startOfWeek(today);
-  return buildDashboard(await loadPlanningTasks(userId, { from: weekStart, to: endOfWeek(weekStart) }, timeZone), today);
+export async function getDashboard(
+  userId: number,
+  today: CalendarDate,
+  timeZone: string,
+  weekStartDay: WeekStartDay,
+): Promise<Dashboard> {
+  const weekStart = startOfWeek(today, weekStartDay);
+  const planningTasks = await loadPlanningTasks(userId, { from: weekStart, to: addDays(weekStart, 6) }, timeZone);
+  return buildDashboard(planningTasks, today, weekStartDay);
 }
 
-// The Weekly Overview of the Monday-Sunday week starting at `weekStart`, for one user.
+// The Weekly Overview of the seven-day week starting at `weekStart` (the first
+// day of the user's week), for one user.
 export async function getWeeklyOverview(
   userId: number,
   weekStart: CalendarDate,
@@ -252,7 +265,7 @@ export async function getWeeklyOverview(
   timeZone: string,
 ): Promise<WeeklyOverview> {
   return buildWeeklyOverview(
-    await loadPlanningTasks(userId, { from: weekStart, to: endOfWeek(weekStart) }, timeZone),
+    await loadPlanningTasks(userId, { from: weekStart, to: addDays(weekStart, 6) }, timeZone),
     weekStart,
     today,
   );
@@ -272,16 +285,36 @@ async function listCompletionDates(userId: number): Promise<CalendarDate[]> {
 
 // Everything Progress shows, for one user: the current week and the one before
 // it, plus the completion history for the streak. Calculated on every call.
-export async function getProgress(userId: number, today: CalendarDate, timeZone: string): Promise<Progress> {
-  const weekStart = startOfWeek(today);
+export async function getProgress(
+  userId: number,
+  today: CalendarDate,
+  timeZone: string,
+  weekStartDay: WeekStartDay,
+): Promise<Progress> {
+  const weekStart = startOfWeek(today, weekStartDay);
   const [planningTasks, completionDates] = await Promise.all([
-    loadPlanningTasks(userId, { from: addDays(weekStart, -7), to: endOfWeek(weekStart) }, timeZone),
+    loadPlanningTasks(userId, { from: addDays(weekStart, -7), to: addDays(weekStart, 6) }, timeZone),
     listCompletionDates(userId),
   ]);
-  return buildProgress(planningTasks, completionDates, today);
+  return buildProgress(planningTasks, completionDates, today, weekStartDay);
 }
 
-export async function getTask(userId: number, taskId: number, today: CalendarDate): Promise<TaskRecord | null> {
+// The life area of one of the user's tasks, or null when it is not theirs.
+export async function getTaskLifeArea(userId: number, taskId: number): Promise<LifeArea | null> {
+  const [row] = await getDb()
+    .select({ lifeArea: tasks.lifeArea })
+    .from(tasks)
+    .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
+    .limit(1);
+  return row?.lifeArea ?? null;
+}
+
+export async function getTask(
+  userId: number,
+  taskId: number,
+  today: CalendarDate,
+  weekStartDay: WeekStartDay,
+): Promise<TaskRecord | null> {
   const [row] = await getDb()
     .select(taskSelection)
     .from(tasks)
@@ -289,7 +322,7 @@ export async function getTask(userId: number, taskId: number, today: CalendarDat
     .where(and(eq(tasks.id, taskId), eq(tasks.userId, userId)))
     .limit(1);
   if (!row) return null;
-  const weeks = await weekCompletions([row.id], today);
+  const weeks = await weekCompletions([row.id], today, weekStartDay);
   return toRecord(row, weeks.get(row.id) ?? new Set(), today);
 }
 
@@ -411,6 +444,7 @@ export async function setTaskCompleted(
   taskId: number,
   completed: boolean,
   today: CalendarDate,
+  weekStartDay: WeekStartDay,
 ): Promise<"ok" | "not_found" | "not_relevant"> {
   return getDb().transaction(async (tx) => {
     const current = await lockOwnTask(tx, userId, taskId);
@@ -445,7 +479,7 @@ export async function setTaskCompleted(
       .where(
         and(
           eq(taskCompletions.taskId, taskId),
-          between(taskCompletions.completedOn, startOfWeek(today), endOfWeek(today)),
+          between(taskCompletions.completedOn, startOfWeek(today, weekStartDay), endOfWeek(today, weekStartDay)),
         ),
       )
       .orderBy(asc(taskCompletions.completedOn));

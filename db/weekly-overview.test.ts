@@ -112,7 +112,7 @@ describe.skipIf(!url)("weekly overview data layer", () => {
     expect(o.hasTasks).toBe(true);
 
     // Same week as the Dashboard: planned and completed totals agree.
-    const dash = await t.getDashboard(userA, TUE, TZ);
+    const dash = await t.getDashboard(userA, TUE, TZ, "Monday");
     const entries = o.days.flatMap((d) => d.items);
     expect(entries.length + o.frequency.reduce((n, f) => n + f.planned, 0)).toBe(dash.week.planned);
     expect(entries.filter((i) => i.done).length + o.frequency.reduce((n, f) => n + f.completed, 0)).toBe(
@@ -161,7 +161,7 @@ describe.skipIf(!url)("weekly overview data layer", () => {
     expect((await t.getWeeklyOverview(userB, MON, TUE, TZ)).days[0].items.map((i) => i.title)).toEqual(["mine"]);
     expect((await t.getWeeklyOverview(userA, MON, TUE, TZ)).days[0].items.map((i) => i.title)).not.toContain("mine");
     // Another user's completion never marks a task of this user.
-    await t.setTaskCompleted(userB, id, true, TUE);
+    await t.setTaskCompleted(userB, id, true, TUE, "Monday");
     expect((await t.getWeeklyOverview(userA, MON, TUE, TZ)).days[1].items.some((i) => i.title === "mine")).toBe(false);
     expect((await t.getWeeklyOverview(userB, MON, TUE, TZ)).days[1].items[0].done).toBe(true);
 

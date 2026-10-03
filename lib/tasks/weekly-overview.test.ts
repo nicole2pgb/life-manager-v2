@@ -48,24 +48,24 @@ const dates = (overview: ReturnType<typeof buildWeeklyOverview>, id: number) =>
 describe("resolveWeek", () => {
   const today = "2026-10-02"; // Friday, week 2026-09-28
   it("defaults to the current week", () => {
-    expect(resolveWeek(undefined, today)).toBe("2026-09-28");
+    expect(resolveWeek(undefined, today, "Monday")).toBe("2026-09-28");
   });
   it("selects the week containing any valid date", () => {
-    expect(resolveWeek("2026-10-07", today)).toBe(MON);
-    expect(resolveWeek("2026-10-11", today)).toBe(MON); // Sunday
-    expect(resolveWeek("2026-10-05", today)).toBe(MON);
+    expect(resolveWeek("2026-10-07", today, "Monday")).toBe(MON);
+    expect(resolveWeek("2026-10-11", today, "Monday")).toBe(MON); // Sunday
+    expect(resolveWeek("2026-10-05", today, "Monday")).toBe(MON);
   });
   it("falls back to the current week for invalid values", () => {
     for (const value of ["abc", "2026-02-30", "", "2026-13-01", ["2026-10-07", "2026-10-14"]]) {
-      expect(resolveWeek(value, today)).toBe("2026-09-28");
+      expect(resolveWeek(value, today, "Monday")).toBe("2026-09-28");
     }
   });
   it("falls back for weeks not fully inside the supported range", () => {
-    expect(resolveWeek("1000-01-01", today)).toBe("2026-09-28"); // its Monday is in year 999
-    expect(resolveWeek("9999-12-31", today)).toBe("2026-09-28"); // its Sunday is in year 10000
-    expect(resolveWeek("1000-01-06", today)).toBe("1000-01-06");
-    expect(resolveWeek("9999-12-27", today)).toBe("2026-09-28"); // its Sunday is in year 10000
-    expect(resolveWeek("9999-12-24", today)).toBe("9999-12-20");
+    expect(resolveWeek("1000-01-01", today, "Monday")).toBe("2026-09-28"); // its Monday is in year 999
+    expect(resolveWeek("9999-12-31", today, "Monday")).toBe("2026-09-28"); // its Sunday is in year 10000
+    expect(resolveWeek("1000-01-06", today, "Monday")).toBe("1000-01-06");
+    expect(resolveWeek("9999-12-27", today, "Monday")).toBe("2026-09-28"); // its Sunday is in year 10000
+    expect(resolveWeek("9999-12-24", today, "Monday")).toBe("9999-12-20");
   });
 });
 

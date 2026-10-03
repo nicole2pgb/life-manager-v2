@@ -1,13 +1,12 @@
 import { LIFE_AREAS, type LifeArea } from "@/db/schema";
-import { addDays, isoWeekday, startOfWeek, type CalendarDate } from "@/lib/dates/calendar-date";
+import { addDays, isoWeekday, startOfWeek, type CalendarDate, type WeekStartDay } from "@/lib/dates/calendar-date";
 import { dayOccurrence, summarizeWeek, type PlanningTask, type WeekSummary } from "./planning";
 
 // Builds the Progress screen from plain task data. Pure: no database, no clock,
 // no time zone. Weekly numbers come from `summarizeWeek` and day placement from
 // `dayOccurrence`, so Progress always agrees with the Dashboard and the Weekly
-// Overview. Weeks run Monday to Sunday; the week start is deliberately not read
-// from user settings (the Settings feature changes all week-based behavior
-// together).
+// Overview. Weeks start on
+// the user's week start day, passed in by the caller.
 
 export type ProgressTaskInput = PlanningTask & {
   lifeArea: LifeArea;
@@ -84,8 +83,9 @@ export function buildProgress(
   tasks: readonly ProgressTaskInput[],
   completionDates: Iterable<CalendarDate>,
   today: CalendarDate,
+  weekStartDay: WeekStartDay,
 ): Progress {
-  const weekStart = startOfWeek(today);
+  const weekStart = startOfWeek(today, weekStartDay);
   const week = summarizeWeek(tasks, weekStart);
   const previousWeek = summarizeWeek(tasks, addDays(weekStart, -7));
 

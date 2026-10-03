@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the Weekly Overview screen: a read-only view of one Monday–Sunday week that shows which tasks belong to which day, how often weekly-frequency tasks were done, and which open tasks have no date, so users can see their week at a glance without overloading a single day.
+Defines the Weekly Overview screen: a read-only view of one seven-day week starting on the user's week start (Monday by default) that shows which tasks belong to which day, how often weekly-frequency tasks were done, and which open tasks have no date, so users can see their week at a glance without overloading a single day.
 
 ## Requirements
 
@@ -17,18 +17,24 @@ The system SHALL provide `/weekly-overview` for authenticated users only. A visi
 - **WHEN** user A and user B each open `/weekly-overview` in their own sessions
 - **THEN** each sees only their own tasks and completions
 
-### Requirement: The viewed week is selected by a URL parameter and always runs Monday to Sunday
-The page SHALL show exactly one calendar week, running Monday to Sunday. The week SHALL be selected with the query parameter `week` holding a calendar date (`YYYY-MM-DD`); any valid date selects the week that contains it, so the shown week does not depend on which weekday the date is. Without the parameter, or when the value is missing, repeated, not a valid calendar date, or selects a week that is not fully inside the supported date range, the page SHALL show the current week (the week containing today) without an error. Any other week, in the past or in the future, SHALL be viewable.
-
-The week start is fixed to Monday in this change. The page MUST NOT read the user's week-start setting. Configurable week start is deferred to the Settings feature, which MUST change all week-based behavior (Dashboard, recurring-task week counting, planned occurrences and Weekly Overview) together so they stay consistent.
+### Requirement: The viewed week is selected by a URL parameter and runs seven days from the user's week start
+The page SHALL show exactly one calendar week of seven days starting on the authenticated user's week start day (Monday by default), with the day columns in that order. The week SHALL be selected with the query parameter `week` holding a calendar date (`YYYY-MM-DD`); any valid date selects the week that contains it, so the shown week does not depend on which weekday the date is. Without the parameter, or when the value is missing, repeated, not a valid calendar date, or selects a week that is not fully inside the supported date range, the page SHALL show the current week (the week containing today) without an error. Any other week, in the past or in the future, SHALL be viewable. The week start MUST be read from the user's settings and be the same one used by Dashboard and Progress.
 
 #### Scenario: Current week by default
-- **WHEN** today is Friday 2026-10-02 and the user opens `/weekly-overview` without parameters
+- **WHEN** today is Friday 2026-10-02, the week start is Monday and the user opens `/weekly-overview` without parameters
 - **THEN** the week 2026-09-28 to 2026-10-04 is shown
 
 #### Scenario: Any date selects its week
-- **WHEN** the user opens `/weekly-overview?week=2026-10-07` (a Wednesday)
+- **WHEN** the week start is Monday and the user opens `/weekly-overview?week=2026-10-07` (a Wednesday)
 - **THEN** the week 2026-10-05 to 2026-10-11 is shown
+
+#### Scenario: Sunday week start
+- **WHEN** the week start is Sunday and the user opens `/weekly-overview?week=2026-10-07`
+- **THEN** the week 2026-10-04 (Sunday) to 2026-10-10 (Saturday) is shown, with the Sunday column first
+
+#### Scenario: Sunday week start without parameter
+- **WHEN** today is Friday 2026-10-02 and the week start is Sunday
+- **THEN** the week 2026-09-27 to 2026-10-03 is shown
 
 #### Scenario: Invalid week value
 - **WHEN** the value is `abc`, `2026-02-30`, empty, or the parameter is given twice
@@ -38,9 +44,9 @@ The week start is fixed to Monday in this change. The page MUST NOT read the use
 - **WHEN** the value selects a week of which any day is outside the supported date range
 - **THEN** the current week is shown
 
-#### Scenario: Week start setting is ignored
-- **WHEN** the user's stored week-start setting is Sunday
-- **THEN** the page still shows Monday to Sunday weeks
+#### Scenario: Week start changed in Settings
+- **WHEN** the user changes the week start and opens the Weekly Overview again
+- **THEN** the week shown is the one that contains the selected date (or today) under the new week start
 
 ### Requirement: Users can move between weeks
 The page SHALL show the date range of the viewed week in a readable German long-date style (day with a period, German month name, for example "28. September – 4. Oktober 2026") rather than in numeric form, and SHALL NOT repeat the year when both ends of the range are in the same year; when the range spans two years, both years are shown (for example "28. Dezember 2026 – 3. Januar 2027"). The page SHALL also provide controls for the previous and the next week, each moving by exactly one week and expressed through the `week` parameter. When the viewed week is not the current week, the page SHALL show a "This week" link that returns to the current week; it MUST NOT be shown when the current week is viewed. A previous or next control whose week would not be fully inside the supported date range SHALL NOT be offered. The controls MUST have accessible names.

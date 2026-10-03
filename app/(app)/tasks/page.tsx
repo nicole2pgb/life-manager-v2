@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getUserSettings } from "@/db/settings";
 import { listTasks } from "@/db/tasks";
 import { TaskCard } from "@/components/tasks/task-card";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -17,7 +18,8 @@ export default async function TasksPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const tasks = await listTasks(user.id, await getTodayFor(user.id));
+  const { weekStart } = await getUserSettings(user.id);
+  const tasks = await listTasks(user.id, await getTodayFor(user.id), weekStart);
   const noticeKey = (await searchParams).notice;
   const notice = typeof noticeKey === "string" && Object.hasOwn(TASK_NOTICES, noticeKey) ? TASK_NOTICES[noticeKey] : null;
 

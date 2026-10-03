@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { createTask, deleteTask, setTaskCompleted, updateTask } from "@/db/tasks";
+import { getUserSettings } from "@/db/settings";
+import { createTask, deleteTask, getTaskLifeArea, setTaskCompleted, updateTask } from "@/db/tasks";
 import { getTodayFor } from "@/lib/dates/time-zone";
 import { getCurrentUser } from "@/lib/auth/session";
 import { NOT_RELEVANT_NOTICE, type TaskFormState } from "@/lib/tasks/form-state";
+import { areasForTask } from "@/lib/settings/life-areas";
 import { parseTaskId, validateTaskInput, type TaskInput } from "@/lib/tasks/validation";
 
 // Only whitelisted fields are read; a user id is never taken from the request.
@@ -56,7 +58,8 @@ const SAVE_FAILED = "Could not save the task. Please try again.";
 
 export async function createTaskAction(_prev: TaskFormState, data: FormData): Promise<TaskFormState> {
   const userId = await requireUserId();
-  const result = validateTaskInput(readTaskInput(data), { mode: "create" });
+  const { lifeAreas } = await getUserSettings(userId);
+  const result = validateTaskInput(readTaskInput(data), { mode: "create", allowedAreas: lifeAreas });
   if (!result.ok) return { errors: result.errors };
 
   try {
@@ -74,7 +77,14 @@ export async function updateTaskAction(_prev: TaskFormState, data: FormData): Pr
   const taskId = parseTaskId(data.get("taskId"));
   if (taskId === null) notFound();
 
-  const result = validateTaskInput(readTaskInput(data), { mode: "update" });
+  // A task keeps its current area even if the user deselected it later.
+  const currentArea = await getTaskLifeArea(userId, taskId);
+  if (currentArea === null) notFound();
+  const { lifeAreas } = await getUserSettings(userId);
+  const result = validateTaskInput(readTaskInput(data), {
+    mode: "update",
+    allowedAreas: areasForTask(lifeAreas, currentArea),
+  });
   if (!result.ok) return { errors: result.errors };
 
   let outcome: Awaited<ReturnType<typeof updateTask>>;
@@ -123,7 +133,8 @@ export async function setTaskCompletedAction(data: FormData): Promise<void> {
   if (taskId !== null && (desired === "true" || desired === "false")) {
     // Only the current calendar date is ever used; a date in the request is ignored.
     const today = await getTodayFor(userId);
-    const outcome = await setTaskCompleted(userId, taskId, desired === "true", today);
+    const { weekStart } = await getUserSettings(userId);
+    const outcome = await setTaskCompleted(userId, taskId, desired === "true", today, weekStart);
     if (outcome === "not_relevant") redirect(`${returnTarget(data.get("returnTo"))}?notice=${NOT_RELEVANT_NOTICE}`);
   }
   revalidateTaskPages();

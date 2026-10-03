@@ -32,51 +32,51 @@ function task(rule: RecurrenceRule, extra: Partial<Omit<PlanningTask, "rule" | "
 
 describe("todayStatus: recurring tasks", () => {
   it("lists daily and only matching weekday tasks", () => {
-    expect(todayStatus(task(daily), TUE).listed).toBe(true);
-    expect(todayStatus(task(monThu), TUE).listed).toBe(false);
-    expect(todayStatus(task(monThu), THU).listed).toBe(true);
+    expect(todayStatus(task(daily), TUE, "Monday").listed).toBe(true);
+    expect(todayStatus(task(monThu), TUE, "Monday").listed).toBe(false);
+    expect(todayStatus(task(monThu), THU, "Monday").listed).toBe(true);
   });
   it("hides a times-per-week task whose target was reached earlier in the week", () => {
-    expect(todayStatus(task(perWeek(3), { done: [MON, TUE, WED] }), FRI).listed).toBe(false);
+    expect(todayStatus(task(perWeek(3), { done: [MON, TUE, WED] }), FRI, "Monday").listed).toBe(false);
   });
   it("keeps a times-per-week task listed as done when the target is reached today", () => {
-    const status = todayStatus(task(perWeek(3), { done: [MON, TUE, FRI] }), FRI);
+    const status = todayStatus(task(perWeek(3), { done: [MON, TUE, FRI] }), FRI, "Monday");
     expect(status).toEqual({ listed: true, done: true, overdue: false });
   });
   it("lists an open times-per-week task below its target", () => {
-    expect(todayStatus(task(perWeek(3), { done: [MON] }), FRI)).toEqual({ listed: true, done: false, overdue: false });
+    expect(todayStatus(task(perWeek(3), { done: [MON] }), FRI, "Monday")).toEqual({ listed: true, done: false, overdue: false });
   });
   it("ignores completions of other weeks for the weekly count", () => {
-    expect(todayStatus(task(perWeek(1), { done: ["2026-10-02"] }), FRI).listed).toBe(true);
+    expect(todayStatus(task(perWeek(1), { done: ["2026-10-02"] }), FRI, "Monday").listed).toBe(true);
   });
   it("keeps a task listed as done today even if its rule no longer makes it relevant", () => {
-    expect(todayStatus(task(monThu, { done: [TUE] }), TUE)).toEqual({ listed: true, done: true, overdue: false });
+    expect(todayStatus(task(monThu, { done: [TUE] }), TUE, "Monday")).toEqual({ listed: true, done: true, overdue: false });
   });
 });
 
 describe("todayStatus: one-time tasks", () => {
   it("lists a task scheduled today, in the past, but not in the future", () => {
-    expect(todayStatus(task(none, { scheduledDate: TUE }), TUE).listed).toBe(true);
-    expect(todayStatus(task(none, { scheduledDate: "2026-10-01" }), TUE).listed).toBe(true);
-    expect(todayStatus(task(none, { scheduledDate: WED }), TUE).listed).toBe(false);
+    expect(todayStatus(task(none, { scheduledDate: TUE }), TUE, "Monday").listed).toBe(true);
+    expect(todayStatus(task(none, { scheduledDate: "2026-10-01" }), TUE, "Monday").listed).toBe(true);
+    expect(todayStatus(task(none, { scheduledDate: WED }), TUE, "Monday").listed).toBe(false);
   });
   it("lists due-date tasks before and after the deadline, overdue only after", () => {
-    expect(todayStatus(task(none, { dueDate: "2026-10-11" }), TUE)).toEqual({ listed: true, done: false, overdue: false });
-    expect(todayStatus(task(none, { dueDate: TUE }), TUE).overdue).toBe(false);
-    expect(todayStatus(task(none, { dueDate: MON }), TUE)).toEqual({ listed: true, done: false, overdue: true });
+    expect(todayStatus(task(none, { dueDate: "2026-10-11" }), TUE, "Monday")).toEqual({ listed: true, done: false, overdue: false });
+    expect(todayStatus(task(none, { dueDate: TUE }), TUE, "Monday").overdue).toBe(false);
+    expect(todayStatus(task(none, { dueDate: MON }), TUE, "Monday")).toEqual({ listed: true, done: false, overdue: true });
   });
   it("never marks a carried-over scheduled task overdue", () => {
-    expect(todayStatus(task(none, { scheduledDate: "2026-09-28" }), TUE).overdue).toBe(false);
+    expect(todayStatus(task(none, { scheduledDate: "2026-09-28" }), TUE, "Monday").overdue).toBe(false);
   });
   it("lists undated incomplete tasks", () => {
-    expect(todayStatus(task(none), TUE)).toEqual({ listed: true, done: false, overdue: false });
+    expect(todayStatus(task(none), TUE, "Monday")).toEqual({ listed: true, done: false, overdue: false });
   });
   it("lists a task completed today as done and hides one completed earlier", () => {
-    expect(todayStatus(task(none, { done: [TUE] }), TUE)).toEqual({ listed: true, done: true, overdue: false });
-    expect(todayStatus(task(none, { done: [MON] }), TUE).listed).toBe(false);
+    expect(todayStatus(task(none, { done: [TUE] }), TUE, "Monday")).toEqual({ listed: true, done: true, overdue: false });
+    expect(todayStatus(task(none, { done: [MON] }), TUE, "Monday").listed).toBe(false);
   });
   it("does not mark a completed overdue task overdue", () => {
-    expect(todayStatus(task(none, { dueDate: MON, done: [TUE] }), TUE).overdue).toBe(false);
+    expect(todayStatus(task(none, { dueDate: MON, done: [TUE] }), TUE, "Monday").overdue).toBe(false);
   });
 });
 

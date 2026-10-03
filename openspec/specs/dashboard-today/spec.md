@@ -125,11 +125,11 @@ Each listed task SHALL have a control to mark it done or not done, with an acces
 - **THEN** the user remains on `/dashboard`, and `/tasks` shows the same state when opened
 
 ### Requirement: Planned occurrences of a week follow one shared definition
-The system SHALL define, in one shared place independent of any screen, how many occurrences a task plans in a calendar week (Monday to Sunday) and how many of them are completed. The creation date of a task is the calendar date of its creation instant in the application time zone. The definition is:
+The system SHALL define, in one shared place independent of any screen, how many occurrences a task plans in a calendar week (seven days starting on the user's week start day, Monday by default) and how many of them are completed. The creation date of a task is the calendar date of its creation instant in the application time zone. The definition is:
 
-- **Daily:** one planned occurrence for each day of the week that is on or after the creation date. A task created before the week plans 7; a task created on Thursday plans 4 (Thursday to Sunday); a task created after the week plans 0.
+- **Daily:** one planned occurrence for each day of the week that is on or after the creation date. A task created before the week plans 7; with a Monday week start, a task created on Thursday plans 4 (Thursday to Sunday); a task created after the week plans 0.
 - **Specific weekdays:** one planned occurrence for each selected weekday that falls on or after the creation date within the week.
-- **Times per week:** the weekly target for a week that starts on or after the creation date's week, i.e. any week after the creation week; in the creation week, the smaller of the target and the number of calendar days from the creation date through Sunday; 0 for a week before the creation week.
+- **Times per week:** the weekly target for a week that starts on or after the creation date's week, i.e. any week after the creation week; in the creation week, the smaller of the target and the number of calendar days from the creation date through the last day of the week; 0 for a week before the creation week.
 - **One-time task with a scheduled date or a due date:** one planned occurrence in the week containing that date, whether or not the date is before the task's creation date. A due-date task contributes one occurrence, not one per day. It contributes nothing to any other week.
 - **One-time task without a date:** no planned occurrences.
 
@@ -147,6 +147,10 @@ The planned and completed counts always use the task's current definition (rule,
 #### Scenario: Daily task created mid-week
 - **WHEN** a daily task is created on Thursday of the current week
 - **THEN** it plans 4 occurrences this week, and none before Thursday
+
+#### Scenario: Sunday week start
+- **WHEN** the user's week start is Sunday and a daily task created last week is evaluated for the week Sunday 2026-10-04 to Saturday 2026-10-10
+- **THEN** it plans 7 occurrences in that week, and a Sunday completion on 2026-10-04 counts in that week, not in the week before
 
 #### Scenario: Weekday task created mid-week
 - **WHEN** a Monday-and-Thursday task is created on Wednesday
@@ -197,7 +201,7 @@ The planned and completed counts always use the task's current definition (rule,
 - **THEN** this week's planned and completed counts are recomputed from the new rule
 
 ### Requirement: The dashboard shows the weekly progress summary
-The dashboard SHALL show, for the current Monday–Sunday week, the number of completed planned occurrences, the number of planned occurrences, and the completion percentage rounded to a whole number, together with the date range of the week (in German format) and the number of planned occurrences still open. It MUST use the shared definition of planned occurrences. When there are no planned occurrences in the week, it SHALL show an explanatory empty state instead of a percentage, and MUST NOT show 0% or NaN.
+The dashboard SHALL show, for the current week (seven days starting on the user's week start day, Monday by default), the number of completed planned occurrences, the number of planned occurrences, and the completion percentage rounded to a whole number, together with the date range of the week (in German format) and the number of planned occurrences still open. It MUST use the shared definition of planned occurrences. When there are no planned occurrences in the week, it SHALL show an explanatory empty state instead of a percentage, and MUST NOT show 0% or NaN.
 
 #### Scenario: Progress shown
 - **WHEN** a week has 33 planned occurrences of which 12 are completed
@@ -214,6 +218,10 @@ The dashboard SHALL show, for the current Monday–Sunday week, the number of co
 #### Scenario: Updates after completion
 - **WHEN** a task is completed from the dashboard
 - **THEN** the weekly numbers reflect it
+
+#### Scenario: Week start respected
+- **WHEN** the user's week start is Sunday and today is Wednesday 2026-10-07
+- **THEN** the summary covers 04.10.2026 – 10.10.2026
 
 ### Requirement: The dashboard header, counts and shortcuts
 The dashboard SHALL greet the user by name and show today's date, a "priorities left" line stating the number of currently open tasks in Today, a Today count of completed out of listed tasks, a "Quick add task" link to `/tasks/new` and a "View all" link to `/tasks`. It MUST NOT show a streak, an active-routines panel or a separate weekly-completion card in this change.

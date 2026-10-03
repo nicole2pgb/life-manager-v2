@@ -14,9 +14,9 @@ const base: TaskInput = {
 };
 
 const create = (overrides: Partial<TaskInput> = {}) =>
-  validateTaskInput({ ...base, ...overrides }, { mode: "create" });
+  validateTaskInput({ ...base, ...overrides }, { mode: "create", allowedAreas: LIFE_AREAS });
 const update = (overrides: Partial<TaskInput> = {}) =>
-  validateTaskInput({ ...base, ...overrides }, { mode: "update" });
+  validateTaskInput({ ...base, ...overrides }, { mode: "update", allowedAreas: LIFE_AREAS });
 
 function errorsOf(result: ReturnType<typeof create>) {
   if (result.ok) throw new Error("expected validation errors");
@@ -104,6 +104,28 @@ describe("dates on update", () => {
   });
   it("accepts a date in the past", () => {
     expect(update({ dateKind: "due", date: "2020-02-02" }).ok).toBe(true);
+  });
+});
+
+describe("allowed life areas", () => {
+  const only = (areas: (typeof LIFE_AREAS)[number][], mode: "create" | "update", lifeArea: string) =>
+    validateTaskInput({ ...base, lifeArea }, { mode, allowedAreas: areas });
+
+  it("rejects a known area that is not allowed", () => {
+    const result = only(["Health", "Learning"], "create", "Finance");
+    if (result.ok) throw new Error("expected validation errors");
+    expect(result.errors.lifeArea).toMatch(/selected life areas/);
+  });
+  it("accepts an allowed area", () => {
+    expect(only(["Health", "Learning"], "create", "Learning").ok).toBe(true);
+  });
+  it("still reports unknown values as invalid", () => {
+    const result = only(["Health"], "update", "Hobbies");
+    if (result.ok) throw new Error("expected validation errors");
+    expect(result.errors.lifeArea).toBe("Choose a life area.");
+  });
+  it("accepts an unchanged area on edit when the caller allows it", () => {
+    expect(only(["Health", "Finance"], "update", "Finance").ok).toBe(true);
   });
 });
 

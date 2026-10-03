@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/weekly-overview", label: "Weekly Overview" },
   { href: "/progress", label: "Progress" },
   { href: "/profile", label: "Profile" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function AppNav() {

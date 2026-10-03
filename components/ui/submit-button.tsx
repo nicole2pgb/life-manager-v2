@@ -5,11 +5,15 @@ import { useFormStatus } from "react-dom";
 export function SubmitButton({
   children,
   variant = "primary",
+  pending: pendingOverride,
 }: {
   children: React.ReactNode;
   variant?: "primary" | "secondary";
+  // For forms that submit through onSubmit: useFormStatus only sees `action` forms.
+  pending?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const pending = pendingOverride ?? status.pending;
   const styles =
     variant === "primary"
       ? "w-full bg-accent text-accent-foreground hover:brightness-110"

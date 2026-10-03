@@ -2,13 +2,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppNav } from "@/components/app-nav";
 import { Logo } from "@/components/ui/logo";
+import { getUserSettings } from "@/db/settings";
 import { getCurrentUser } from "@/lib/auth/session";
+import { themeAttribute } from "@/lib/settings/themes";
 
 // Authoritative session check for every protected page in this group.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  if (!(await getCurrentUser())) redirect("/login");
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  // The theme color is the accent of every protected page (see globals.css).
+  const { themeColor } = await getUserSettings(user.id);
   return (
-    <div className="flex flex-1 flex-col">
+    <div data-theme={themeAttribute(themeColor)} className="flex flex-1 flex-col">
       <header className="border-b border-border">
         <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-8">
           <Link

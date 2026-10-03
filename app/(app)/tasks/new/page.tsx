@@ -1,13 +1,16 @@
 import { redirect } from "next/navigation";
-import { LIFE_AREAS } from "@/db/schema";
+import { getUserSettings } from "@/db/settings";
 import { TaskForm } from "@/components/tasks/task-form";
 import { getCurrentUser } from "@/lib/auth/session";
+import { defaultLifeArea } from "@/lib/settings/life-areas";
 import { createTaskAction } from "../actions";
 
 export const metadata = { title: "New task · Life Manager" };
 
 export default async function NewTaskPage() {
-  if (!(await getCurrentUser())) redirect("/login");
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const { lifeAreas } = await getUserSettings(user.id);
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10 sm:px-8">
       <section className="rounded-2xl border border-border bg-surface p-6 sm:p-7">
@@ -16,12 +19,12 @@ export default async function NewTaskPage() {
         <div className="mt-6">
           <TaskForm
             action={createTaskAction}
-            lifeAreas={LIFE_AREAS}
+            lifeAreas={lifeAreas}
             submitLabel="Create task"
             initial={{
               title: "",
               notes: "",
-              lifeArea: "Personal",
+              lifeArea: defaultLifeArea(lifeAreas),
               dateKind: "none",
               date: "",
               recurrence: "none",

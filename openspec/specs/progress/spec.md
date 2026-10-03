@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the Progress screen: a read-only view of the current Monday–Sunday week that shows the weekly completion rate, the current streak, the change against the previous week, daily completion, a weekly completion donut and progress by life area, all calculated from the user's tasks, recurrence rules and completions using the shared planned-occurrence definitions.
+Defines the Progress screen: a read-only view of the current seven-day week starting on the user's week start (Monday by default) that shows the weekly completion rate, the current streak, the change against the previous week, daily completion, a weekly completion donut and progress by life area, all calculated from the user's tasks, recurrence rules and completions using the shared planned-occurrence definitions.
 
 ## Requirements
 
@@ -21,12 +21,20 @@ The system SHALL provide `/progress` for authenticated users only. A visitor wit
 - **WHEN** the application time zone is Europe/Berlin and the instant is 2026-10-01 23:30 UTC
 - **THEN** Progress treats 2026-10-02 as today
 
-### Requirement: Progress always shows the current Monday–Sunday week
-The page SHALL show the current week (the week containing today), running Monday to Sunday, for weekly completion, daily completion, the weekly donut and life-area progress, and the previous Monday–Sunday week for the weekly change. It MUST NOT offer week navigation. The week start is fixed to Monday in this change: the page MUST NOT read the user's week-start setting. Configurable week start is deferred to the Settings feature, which MUST change all week-based behavior (Dashboard, Weekly Overview, Progress, recurring-task week counting and planned occurrences) together so they stay consistent.
+### Requirement: Progress shows the current week according to the user's week start
+The page SHALL show the current week (the week containing today), seven days starting on the user's week start day (Monday by default), for weekly completion, daily completion, the weekly donut and life-area progress, and the previous week of the same length for the weekly change. It MUST NOT offer week navigation. The week start MUST be read from the authenticated user's settings and applied to all of these values together, using the same week as Dashboard and Weekly Overview.
 
 #### Scenario: Current week
-- **WHEN** today is Friday 2026-10-02
+- **WHEN** today is Friday 2026-10-02 and the week start is Monday
 - **THEN** the page covers the week 2026-09-28 to 2026-10-04 and compares it with 2026-09-21 to 2026-09-27
+
+#### Scenario: Current week with Sunday start
+- **WHEN** today is Friday 2026-10-02 and the week start is Sunday
+- **THEN** the page covers the week 2026-09-27 to 2026-10-03 and compares it with 2026-09-20 to 2026-09-26
+
+#### Scenario: Agrees with the dashboard
+- **WHEN** the week start is Sunday
+- **THEN** the weekly completed and planned numbers equal those on the dashboard
 
 ### Requirement: Weekly completion reuses the shared planned-occurrence definition
 The page SHALL show the number of completed and planned occurrences of the current week and the completion percentage rounded to a whole number. The numbers MUST equal the Dashboard's weekly progress for the same data, including times-per-week tasks, dated one-time tasks and the creation-date rules. When no occurrence is planned in the week, the page SHALL show a "nothing planned" state with no percentage and MUST NOT show 0% or NaN.
@@ -102,7 +110,7 @@ The page SHALL show the difference between the current week's completion rate an
 - **THEN** it plans no occurrence in the previous week, and a dated one-time task scheduled in the previous week counts there (completed when it has a completion)
 
 ### Requirement: Daily completion shows day-placed occurrences for the current week
-The page SHALL show seven bars, Monday to Sunday, of completed versus planned occurrences per day of the current week. Only occurrences that belong to a specific day SHALL be placed: daily tasks on each day from their creation date, specific-weekday tasks on their selected weekdays from their creation date, and one-time tasks with a scheduled or due date on that date. A dated one-time task SHALL belong to its scheduled or due day and is done on that day whatever date it was completed on. Times-per-week tasks MUST NOT be placed on any day, and undated one-time tasks plan nothing. A day with at least one planned occurrence shows its completed share of planned; a day in the future shows its planned occurrences as incomplete (an empty bar). A day with no planned occurrence SHALL show a "no planned" state and MUST NOT show 0%. Today's bar SHALL be marked. Each bar SHALL expose its numbers (completed of planned) in text, not by the bar alone. Because times-per-week occurrences are intentionally excluded from days, the daily totals MAY be lower than the weekly totals; the day placement itself MUST agree with Weekly Overview for the same week.
+The page SHALL show seven bars, in order from the user's week start day (Monday by default), of completed versus planned occurrences per day of the current week. Only occurrences that belong to a specific day SHALL be placed: daily tasks on each day from their creation date, specific-weekday tasks on their selected weekdays from their creation date, and one-time tasks with a scheduled or due date on that date. A dated one-time task SHALL belong to its scheduled or due day and is done on that day whatever date it was completed on. Times-per-week tasks MUST NOT be placed on any day, and undated one-time tasks plan nothing. A day with at least one planned occurrence shows its completed share of planned; a day in the future shows its planned occurrences as incomplete (an empty bar). A day with no planned occurrence SHALL show a "no planned" state and MUST NOT show 0%. Today's bar SHALL be marked. Each bar SHALL expose its numbers (completed of planned) in text, not by the bar alone. Because times-per-week occurrences are intentionally excluded from days, the daily totals MAY be lower than the weekly totals; the day placement itself MUST agree with Weekly Overview for the same week.
 
 #### Scenario: Partly done day
 - **WHEN** Wednesday has 4 planned day-placed occurrences of which 2 are completed
@@ -131,6 +139,10 @@ The page SHALL show seven bars, Monday to Sunday, of completed versus planned oc
 #### Scenario: Agrees with Weekly Overview
 - **WHEN** the same week is shown in Weekly Overview
 - **THEN** each day's planned and completed counts equal the number of entries and done entries in that day's column
+
+#### Scenario: Sunday week start
+- **WHEN** the user's week start is Sunday
+- **THEN** the bars run Sunday, Monday, ..., Saturday and each bar's numbers equal the entries of the same day in Weekly Overview
 
 ### Requirement: The weekly completion donut shows the current week
 The page SHALL show a donut for the current week with the whole-number percentage, "completed/planned done" and the week range in the German long-date format of the existing `formatWeekRange` (for example "28. September – 4. Oktober 2026"). When nothing is planned it SHALL show a "nothing planned" state instead of a percentage. The donut's text MUST carry the numbers; the ring alone does not. The page MUST NOT show a multi-week trend or other analytics.
