@@ -28,6 +28,10 @@ jobs:
 
       - run: npm run lint
 
+      # Next generates global types (e.g. LayoutProps) into the git-ignored
+      # .next/types. A clean checkout has none, so generate them before tsc.
+      - run: npx next typegen
+
       - run: npx tsc --noEmit
 
       # No database or secrets in CI: the DB-backed tests skip themselves
