@@ -1,15 +1,13 @@
-import { redirect } from "next/navigation";
 import { getUserSettings } from "@/db/settings";
 import { TaskForm } from "@/components/tasks/task-form";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import { defaultLifeArea } from "@/lib/settings/life-areas";
 import { createTaskAction } from "../actions";
 
 export const metadata = { title: "New task · Life Manager" };
 
 export default async function NewTaskPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
   const { lifeAreas } = await getUserSettings(user.id);
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10 sm:px-8">

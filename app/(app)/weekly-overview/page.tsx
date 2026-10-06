@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { LifeAreaBadge } from "@/components/tasks/life-area-badge";
 import { DayColumn } from "@/components/weekly-overview/day-column";
 import { FrequencyRow } from "@/components/weekly-overview/frequency-row";
 import { TaskTitleLink } from "@/components/weekly-overview/task-title-link";
 import { getUserSettings } from "@/db/settings";
 import { getWeeklyOverview } from "@/db/tasks";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import { startOfWeek, formatWeekRange } from "@/lib/dates/calendar-date";
 import { getTodayFor, getUserTimeZone } from "@/lib/dates/time-zone";
 import { adjacentWeeks, resolveWeek } from "@/lib/tasks/weekly-overview";
@@ -27,8 +26,7 @@ export default async function WeeklyOverviewPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   // The layout already checks; repeat so the page never relies on it alone.
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const today = await getTodayFor(user.id);
   const { weekStart: weekStartDay } = await getUserSettings(user.id);

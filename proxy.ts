@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { SESSION_COOKIE } from "@/lib/auth/constants";
 
 // Optimistic check only: no session cookie on a protected path -> /login.
 // The real session check happens in server code (getCurrentUser); the pages
@@ -10,7 +11,7 @@ const PUBLIC_PATHS = ["/login", "/register", "/api/health"];
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
-  if (!request.cookies.has("session")) {
+  if (!request.cookies.has(SESSION_COOKIE)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   return NextResponse.next();

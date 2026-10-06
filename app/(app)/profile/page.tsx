@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import { logoutAction } from "../actions";
 
 function initials(name: string): string {
@@ -10,8 +9,7 @@ function initials(name: string): string {
 
 export default async function ProfilePage() {
   // The layout already checks; repeat so the page never relies on it alone.
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-8">

@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getUserSettings } from "@/db/settings";
 import { listTasks } from "@/db/tasks";
 import { TaskCard } from "@/components/tasks/task-card";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import { getTodayFor } from "@/lib/dates/time-zone";
 import { TASK_NOTICES } from "@/lib/tasks/form-state";
 
@@ -15,8 +14,7 @@ export default async function TasksPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   // The layout already checks; repeat so the page never relies on it alone.
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const { weekStart } = await getUserSettings(user.id);
   const tasks = await listTasks(user.id, await getTodayFor(user.id), weekStart);

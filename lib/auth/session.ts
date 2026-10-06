@@ -2,17 +2,22 @@ import "server-only";
 
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { and, eq, gt, lte } from "drizzle-orm";
+import { and, eq, gt, lte, type SQL } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import { SESSION_COOKIE } from "./constants";
 import { generateToken, hashToken } from "./token";
 
 const { sessions, users } = schema;
 
-export const SESSION_COOKIE = "session";
 const SESSION_DAYS = 30;
 const SESSION_SECONDS = SESSION_DAYS * 24 * 60 * 60;
 
 export type CurrentUser = { id: number; name: string; email: string };
+
+// Deletes the sessions matching `scope` that have already expired.
+async function deleteExpiredSessions(scope: SQL): Promise<void> {
+  await getDb().delete(sessions).where(and(scope, lte(sessions.expiresAt, new Date())));
+}
 
 async function setSessionCookie(token: string) {
   (await cookies()).set(SESSION_COOKIE, token, {
@@ -32,7 +37,7 @@ export async function createSession(userId: number): Promise<void> {
   const db = getDb();
   if (old) await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(old)));
   // Housekeeping: drop this user's expired sessions.
-  await db.delete(sessions).where(and(eq(sessions.userId, userId), lte(sessions.expiresAt, new Date())));
+  await deleteExpiredSessions(eq(sessions.userId, userId));
 
   const token = generateToken();
   await db.insert(sessions).values({
@@ -67,6 +72,6 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     .limit(1);
   if (row) return row;
 
-  await db.delete(sessions).where(and(eq(sessions.tokenHash, tokenHash), lte(sessions.expiresAt, new Date())));
+  await deleteExpiredSessions(eq(sessions.tokenHash, tokenHash));
   return null;
 });

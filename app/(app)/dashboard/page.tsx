@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { TodayRow } from "@/components/dashboard/today-row";
 import { WeeklyProgress } from "@/components/dashboard/weekly-progress";
 import { getUserSettings } from "@/db/settings";
 import { getDashboard } from "@/db/tasks";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import { formatLongCalendarDate } from "@/lib/dates/calendar-date";
 import { getTodayFor, getUserTimeZone } from "@/lib/dates/time-zone";
 import { TASK_NOTICES } from "@/lib/tasks/form-state";
@@ -20,8 +19,7 @@ export default async function DashboardPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   // The layout already checks; repeat so the page never relies on it alone.
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const today = await getTodayFor(user.id);
   const { weekStart } = await getUserSettings(user.id);
