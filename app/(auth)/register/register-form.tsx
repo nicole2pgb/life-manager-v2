@@ -11,6 +11,11 @@ export function RegisterForm() {
   const errors = state?.errors;
   return (
     <form action={action} className="flex flex-col gap-4" noValidate>
+      {errors?.form ? (
+        <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {errors.form}
+        </p>
+      ) : null}
       <Field label="Name" name="name" placeholder="Your name" autoComplete="name" defaultValue={state?.values?.name} error={errors?.name} />
       <Field label="Email" name="email" type="email" placeholder="you@example.com" autoComplete="email" defaultValue={state?.values?.email} error={errors?.email} />
       <Field label="Password" name="password" type="password" autoComplete="new-password" error={errors?.password} />

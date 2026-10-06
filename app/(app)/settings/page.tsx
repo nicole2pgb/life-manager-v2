@@ -1,15 +1,13 @@
-import { redirect } from "next/navigation";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { getUserSettings } from "@/db/settings";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import { saveSettingsAction } from "./actions";
 
 export const metadata = { title: "Settings · Life Manager" };
 
 export default async function SettingsPage() {
   // The layout already checks; repeat so the page never relies on it alone.
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const settings = await getUserSettings(user.id);
   return (

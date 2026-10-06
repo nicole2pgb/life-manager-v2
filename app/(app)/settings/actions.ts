@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { saveUserSettings } from "@/db/settings";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import type { SettingsFormState } from "@/lib/settings/form-state";
 import { validateSettings } from "@/lib/settings/validation";
 
@@ -14,8 +13,7 @@ const optionalText = (data: FormData, key: string) => {
 };
 
 export async function saveSettingsAction(_prev: SettingsFormState, data: FormData): Promise<SettingsFormState> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const result = validateSettings({
     themeColor: optionalText(data, "themeColor"),

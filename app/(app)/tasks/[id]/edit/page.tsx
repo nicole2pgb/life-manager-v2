@@ -1,9 +1,9 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { TaskForm } from "@/components/tasks/task-form";
 import { dateLabel } from "@/components/tasks/task-card";
 import { getUserSettings } from "@/db/settings";
 import { getTask } from "@/db/tasks";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import { getTodayFor } from "@/lib/dates/time-zone";
 import { areasForTask } from "@/lib/settings/life-areas";
 import { parseTaskId } from "@/lib/tasks/validation";
@@ -12,8 +12,7 @@ import { updateTaskAction } from "../../actions";
 export const metadata = { title: "Edit task · Life Manager" };
 
 export default async function EditTaskPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   // A malformed id, a missing task and another user's task all look the same.
   const taskId = parseTaskId((await params).id);

@@ -1,15 +1,13 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { AppNav } from "@/components/app-nav";
 import { Logo } from "@/components/ui/logo";
 import { getUserSettings } from "@/db/settings";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
 import { themeAttribute } from "@/lib/settings/themes";
 
 // Authoritative session check for every protected page in this group.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
   // The theme color is the accent of every protected page (see globals.css).
   const { themeColor } = await getUserSettings(user.id);
   return (

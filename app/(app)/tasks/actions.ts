@@ -5,32 +5,23 @@ import { notFound, redirect } from "next/navigation";
 import { getUserSettings } from "@/db/settings";
 import { createTask, deleteTask, getTaskLifeArea, setTaskCompleted, updateTask } from "@/db/tasks";
 import { getTodayFor } from "@/lib/dates/time-zone";
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/require-user";
+import { readText } from "@/lib/form-data";
 import { NOT_RELEVANT_NOTICE, type TaskFormState } from "@/lib/tasks/form-state";
 import { areasForTask } from "@/lib/settings/life-areas";
 import { parseTaskId, validateTaskInput, type TaskInput } from "@/lib/tasks/validation";
 
-// Only whitelisted fields are read; a user id is never taken from the request.
-const text = (data: FormData, key: string) => {
-  const value = data.get(key);
-  return typeof value === "string" ? value : "";
-};
 const optionalText = (data: FormData, key: string) => {
   const value = data.get(key);
   return typeof value === "string" ? value : null;
 };
 
-async function requireUserId(): Promise<number> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user.id;
-}
-
+// Only whitelisted fields are read; a user id is never taken from the request.
 function readTaskInput(data: FormData): TaskInput {
   return {
-    title: text(data, "title"),
-    notes: text(data, "notes"),
-    lifeArea: text(data, "lifeArea"),
+    title: readText(data, "title"),
+    notes: readText(data, "notes"),
+    lifeArea: readText(data, "lifeArea"),
     dateKind: optionalText(data, "dateKind"),
     date: optionalText(data, "date"),
     recurrence: optionalText(data, "recurrence"),
@@ -57,7 +48,7 @@ function returnTarget(value: FormDataEntryValue | null): (typeof RETURN_TARGETS)
 const SAVE_FAILED = "Could not save the task. Please try again.";
 
 export async function createTaskAction(_prev: TaskFormState, data: FormData): Promise<TaskFormState> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const { lifeAreas } = await getUserSettings(userId);
   const result = validateTaskInput(readTaskInput(data), { mode: "create", allowedAreas: lifeAreas });
   if (!result.ok) return { errors: result.errors };
@@ -73,7 +64,7 @@ export async function createTaskAction(_prev: TaskFormState, data: FormData): Pr
 }
 
 export async function updateTaskAction(_prev: TaskFormState, data: FormData): Promise<TaskFormState> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const taskId = parseTaskId(data.get("taskId"));
   if (taskId === null) notFound();
 
@@ -118,7 +109,7 @@ export async function updateTaskAction(_prev: TaskFormState, data: FormData): Pr
 }
 
 export async function deleteTaskAction(data: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const taskId = parseTaskId(data.get("taskId"));
   if (taskId !== null) await deleteTask(userId, taskId);
   revalidateTaskPages();
@@ -127,7 +118,7 @@ export async function deleteTaskAction(data: FormData): Promise<void> {
 
 // The form submits the desired state, so repeated submits are idempotent.
 export async function setTaskCompletedAction(data: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const taskId = parseTaskId(data.get("taskId"));
   const desired = data.get("completed");
   if (taskId !== null && (desired === "true" || desired === "false")) {
