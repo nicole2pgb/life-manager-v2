@@ -3,7 +3,9 @@ export const PASSWORD_MIN_BYTES = 8;
 export const PASSWORD_MAX_BYTES = 72;
 const MAX_FIELD_LENGTH = 255;
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Pragmatic check, not full RFC 5322: some local part, then a domain made of
+// at least two dot-separated labels, none of them empty (rejects "a@b..c", "a@b.c.").
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 export type FieldErrors = Partial<
   Record<"name" | "email" | "password" | "confirmPassword", string>

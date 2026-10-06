@@ -25,6 +25,11 @@ describe("validateRegistration", () => {
       expect(validateRegistration({ ...valid, email }).email).toBeDefined();
     }
   });
+  it("rejects emails whose domain has an empty label", () => {
+    for (const email of ["user@example..com", "user@example.com.", "user@.example.com"]) {
+      expect(validateRegistration({ ...valid, email }).email, email).toBeDefined();
+    }
+  });
   it("rejects mismatched confirmation", () => {
     const errors = validateRegistration({ ...valid, confirmPassword: "different pw" });
     expect(errors.confirmPassword).toBeDefined();
