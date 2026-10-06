@@ -4,7 +4,8 @@ import type { NextRequest } from "next/server";
 // Optimistic check only: no session cookie on a protected path -> /login.
 // The real session check happens in server code (getCurrentUser); the pages
 // under /login and /register redirect signed-in users themselves.
-const PUBLIC_PATHS = ["/login", "/register"];
+// /api/health is the uptime-monitor probe; it must answer without a session.
+const PUBLIC_PATHS = ["/login", "/register", "/api/health"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

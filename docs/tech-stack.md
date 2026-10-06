@@ -63,6 +63,8 @@ The prototype is a UI and user-flow reference, not the production codebase.
 
 ## Deployment
 
-To be decided later.
-
-Deployment and production database hosting are not required during initial MVP development.
+- App: Next.js on Vercel (Node server runtime, HTTPS).
+- Database: MySQL 9 on Railway, reached through its public TCP proxy via `DATABASE_URL`.
+- Migrations: `npm run db:migrate` is run manually against the production database; it is not part of app start or CI.
+- Health check: `GET /api/health` is public and returns `200` (`database: "up"`) or `503` (`database: "down"`). It exposes no environment or error details, so an uptime monitor can poll it.
+- CI: `.github/workflows/ci.yml` runs lint, type check, tests and a production build on every pull request to `main`. It needs no secrets or database; the database-backed tests skip themselves without `TEST_DATABASE_URL`.
