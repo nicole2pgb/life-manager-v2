@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChatWidget } from "@/components/assistant/chat-widget";
 import { AppNav } from "@/components/app-nav";
 import { Logo } from "@/components/ui/logo";
 import { getUserSettings } from "@/db/settings";
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
       {children}
+      <ChatWidget />
     </div>
   );
 }
